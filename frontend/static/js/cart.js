@@ -3,60 +3,115 @@ document.addEventListener('DOMContentLoaded', () => {
     const cartBody = document.getElementById('cart-body');
     const grandTotalElement = document.getElementById('cart-grand-total');
     const cartCountElement = document.getElementById('cart-count');
-    const API_BASE_URL = 'http://127.0.0.1:8000';
+    const checkoutButton = document.getElementById('proceed-to-checkout');
+    const checkoutModalElement = document.getElementById('checkoutConfirmModal');
+    const bsCheckoutModal = new bootstrap.Modal(checkoutModalElement);
+    const confirmOrderBtn = document.getElementById('confirm-order-btn');
 
+    const token = localStorage.getItem('authToken');
 
-    function getCart() {
-        return JSON.parse(localStorage.getItem('cart')) || [];
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
+    const csrftoken = getCookie('csrftoken');
 
-    function saveCart(cart) {
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartCounter();
-        loadCartItems();
-    }
 
-    function updateCartCounter() {
-        let cart = getCart();
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    function updateCartCounter(cartData) {
+        if (!cartData || !cartData.items) {
+            if (cartCountElement) cartCountElement.textContent = '0';
+            return;
+        }
+        const totalItems = cartData.items.reduce((sum, item) => sum + item.quantity, 0);
         if (cartCountElement) {
             cartCountElement.textContent = totalItems;
         }
     }
 
-    // Cart Rendering
-
-    function loadCartItems() {
-        let cart = getCart();
-        cartBody.innerHTML = '';
-
-        if (cart.length === 0) {
-            cartBody.innerHTML = '<p class="text-center p-4 text-muted">Your cart is empty.</p>';
-            updateGrandTotal();
+    // კალათის HTML-ში დახატვა
+    async function loadCartItems() {
+        // ვამოწმებთ, დალოგინებულია თუ არა მომხმარებელი
+        if (!token) {
+            cartBody.innerHTML = '<p class="text-center p-4 text-muted">Please <a href="/login/">log in</a> to view your cart.</p>';
+            if (checkoutButton) checkoutButton.disabled = true;
             return;
         }
 
-        cart.forEach(item => {
-            const itemRow = createCartItemRow(item);
-            cartBody.appendChild(itemRow);
-        });
+        // ვიღებთ კალათას Backend-იდან
+        try {
+            const response = await fetch('/api/cart/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${token}`,
+                }
+            });
 
-        updateGrandTotal();
+            if (!response.ok) {
+                if (response.status === 401) { // Unauthorized
+                     cartBody.innerHTML = '<p class="text-center p-4 text-muted">Your session expired. Please <a href="/login/">log in</a> again.</p>';
+                     localStorage.removeItem('authToken');
+                } else {
+                    throw new Error('Failed to fetch cart');
+                }
+                return;
+            }
+
+            const cartData = await response.json();
+            renderCart(cartData);
+
+        } catch (error) {
+            console.error('Error loading cart:', error);
+            cartBody.innerHTML = '<p class="text-center p-4 text-danger">Could not load cart. Please try again later.</p>';
+        }
     }
+
+    function renderCart(cartData) {
+        cartBody.innerHTML = '';
+
+        if (!cartData.items || cartData.items.length === 0) {
+            cartBody.innerHTML = '<p class="text-center p-4 text-muted">Your cart is empty.</p>';
+            if (checkoutButton) checkoutButton.disabled = true;
+        } else {
+            cartData.items.forEach(item => {
+                const itemRow = createCartItemRow(item);
+                cartBody.appendChild(itemRow);
+            });
+            if (checkoutButton) checkoutButton.disabled = false;
+        }
+
+        // ვაახლებთ ჯამურ ფასს და მრიცხველს
+        if (grandTotalElement) {
+            grandTotalElement.textContent = `$${parseFloat(cartData.total_price).toFixed(2)}`;
+        }
+        updateCartCounter(cartData);
+    }
+
 
     function createCartItemRow(item) {
         const row = document.createElement('div');
         row.className = 'cart-item-row';
         row.dataset.itemId = item.id;
 
-        const itemTotal = item.price * item.quantity;
-        const imageUrl = item.image ? item.image : 'https://via.placeholder.com/300x200.png?text=No+Image';
+        // ვითვლით ამ რიგის ჯამურ ფასს
+        const itemTotal = item.price_at_order * item.quantity;
+        const imageUrl = item.dish_image ? item.dish_image : 'https://via.placeholder.com/300x200.png?text=No+Image';
 
         row.innerHTML = `
             <div class="cart-col product">
                 <button class="btn-remove-item" title="Remove item">&times;</button>
-                <img src="${imageUrl}" alt="${item.name}">
-                <span>${item.name}</span>
+                <img src="${imageUrl}" alt="${item.dish_name}">
+                <span>${item.dish_name}</span>
             </div>
             <div class="cart-col qty">
                 <div class="quantity-control">
@@ -65,21 +120,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-qty plus" data-change="1">+</button>
                 </div>
             </div>
-            <div class="cart-col price">$${parseFloat(item.price).toFixed(2)}</div>
+            <div class="cart-col price">$${parseFloat(item.price_at_order).toFixed(2)}</div>
             <div class="cart-col total">$${itemTotal.toFixed(2)}</div>
         `;
         return row;
     }
 
-    function updateGrandTotal() {
-        let cart = getCart();
-        const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
-        if (grandTotalElement) {
-            grandTotalElement.textContent = `$${total.toFixed(2)}`;
-        }
-    }
-
-    // Event Handlers
+    //Event Handlers (ღილაკებზე დაჭერა)
 
     cartBody.addEventListener('click', (e) => {
         const row = e.target.closest('.cart-item-row');
@@ -87,36 +134,123 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const itemId = row.dataset.itemId;
 
+        // წაშლის ღილაკი
         if (e.target.classList.contains('btn-remove-item')) {
             handleRemoveItem(itemId);
         }
 
+        // რაოდენობის ცვლილების ღილაკები
         if (e.target.classList.contains('btn-qty')) {
             const change = parseInt(e.target.dataset.change, 10);
-            handleQuantityChange(itemId, change);
+            const currentQuantity = parseInt(row.querySelector('input').value, 10);
+            const newQuantity = currentQuantity + change;
+
+            if (newQuantity > 0) {
+                handleQuantityChange(itemId, newQuantity);
+            } else {
+                handleRemoveItem(itemId);
+            }
         }
     });
 
-    function handleRemoveItem(itemId) {
-        let cart = getCart();
-        cart = cart.filter(item => item.id != itemId);
-        saveCart(cart);
-    }
+    async function handleRemoveItem(itemId) {
+        try {
+            const response = await fetch('/api/cart/', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${token}`,
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ item_id: itemId })
+            });
 
-    function handleQuantityChange(itemId, change) {
-        let cart = getCart();
-        let item = cart.find(i => i.id == itemId);
-
-        if (item) {
-            item.quantity += change;
-            if (item.quantity <= 0) {
-                handleRemoveItem(itemId);
+            if (response.ok) {
+                const cartData = await response.json();
+                renderCart(cartData);
             } else {
-                saveCart(cart);
+                showGlobalAlert('Failed to remove item.', 'danger');
             }
+        } catch (error) {
+            console.error('Error removing item:', error);
+            showGlobalAlert('An error occurred.', 'danger');
         }
     }
 
+    async function handleQuantityChange(itemId, newQuantity) {
+        try {
+            const response = await fetch('/api/cart/', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${token}`,
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({
+                    item_id: itemId,
+                    quantity: newQuantity
+                })
+            });
+
+            if (response.ok) {
+                const cartData = await response.json();
+                renderCart(cartData);
+            } else {
+                showGlobalAlert('Failed to update quantity.', 'danger');
+            }
+        } catch (error) {
+            console.error('Error updating quantity:', error);
+            showGlobalAlert('An error occurred.', 'danger');
+        }
+    }
+
+  // Checkout ღილაკის ლოგიკა
+
+    if (checkoutButton) {
+        checkoutButton.addEventListener('click', () => {
+            if (!token) {
+                showGlobalAlert('Please log in to place an order.', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/login/';
+                }, 1500);
+                return;
+            }
+            bsCheckoutModal.show();
+        });
+    }
+
+    if (confirmOrderBtn) {
+        confirmOrderBtn.addEventListener('click', async () => {
+            bsCheckoutModal.hide();
+            try {
+                // ვიძახებთ შეკვეთის განთავსების API-ს
+                const response = await fetch('/api/orders/place/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                        'X-CSRFToken': csrftoken
+                    }
+                });
+
+                if (response.ok) {
+                    showGlobalAlert('Order placed successfully!', 'success');
+
+                    setTimeout(() => {
+                        window.location.href = '/history/';
+                    }, 1500);
+
+                } else {
+                    const errorData = await response.json();
+                    showGlobalAlert(`Failed to place order: ${errorData.error}`, 'danger');
+                }
+            } catch (error) {
+                console.error('Error placing order:', error);
+                showGlobalAlert('An error occurred.', 'danger');
+            }
+        });
+    }
+
+
     loadCartItems();
-    updateCartCounter();
 });

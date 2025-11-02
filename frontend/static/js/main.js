@@ -1,9 +1,8 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     // API მისამართები
-    const API_BASE_URL = 'http://127.0.0.1:8000';
-    const API_CATEGORIES_URL = `${API_BASE_URL}/api/categories/`;
-    const API_DISHES_URL = `${API_BASE_URL}/api/dishes/`;
+    const API_CATEGORIES_URL = '/api/categories/';
+    const API_DISHES_URL = '/api/dishes/';
 
     // DOM ელემენტები
     const categoriesContainer = document.getElementById('category-links');
@@ -163,53 +162,97 @@ document.addEventListener('DOMContentLoaded', () => {
         fetchDishes();
     });
 
-    // კალათის ლოგიკა
+// კალათის ლოგიკა
 
-    function getCart() {
-        return JSON.parse(localStorage.getItem('cart')) || [];
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
     }
+    const csrftoken = getCookie('csrftoken');
 
-    function saveCart(cart) {
-        localStorage.setItem('cart', JSON.stringify(cart));
-        updateCartCounter();
-    }
+    async function updateCartCounter() {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            if (cartCountElement) cartCountElement.textContent = '0';
+            return;
+        }
 
-    function addToCart(dish) {
-        let cart = getCart();
-        let existingItem = cart.find(item => item.id === dish.id);
-
-        if (existingItem) {
-            existingItem.quantity++;
-        } else {
-            cart.push({
-                id: dish.id,
-                name: dish.name,
-                price: dish.price,
-                image: dish.image,
-                quantity: 1
+        try {
+            const response = await fetch('/api/cart/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${token}`,
+                }
             });
+
+            if (response.ok) {
+                const cartData = await response.json();
+                const totalItems = cartData.items.reduce((sum, item) => sum + item.quantity, 0);
+                if (cartCountElement) {
+                    cartCountElement.textContent = totalItems;
+                }
+            } else {
+                if (cartCountElement) cartCountElement.textContent = '0';
+            }
+        } catch (error) {
+            console.error('Error fetching cart count:', error);
+            if (cartCountElement) cartCountElement.textContent = '0';
         }
-        saveCart(cart);
-        console.log('Cart updated:', cart);
     }
 
-    function updateCartCounter() {
-        let cart = getCart();
-        const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-        if (cartCountElement) {
-            cartCountElement.textContent = totalItems;
-        }
-    }
-
-    // კალათაში დამატების ღილაკის ლოგიკა
-    dishesContainer.addEventListener('click', (e) => {
+    dishesContainer.addEventListener('click', async (e) => {
         if (e.target.classList.contains('btn-add-to-cart')) {
+            e.preventDefault();
+            const token = localStorage.getItem('authToken');
+
+            if (!token) {
+                showGlobalAlert('Please log in to add items to your cart.', 'warning');
+                window.location.href = '/login/';
+                return;
+            }
+
             const dishId = e.target.dataset.dishId;
-            const dishToAdd = allDishes.find(d => d.id == dishId); // ვპოულობთ კერძს
-            if (dishToAdd) {
-                addToCart(dishToAdd);
-                e.target.textContent = 'Added!';
-                setTimeout(() => { e.target.textContent = 'Add to cart'; }, 1000);
+
+            try {
+                const response = await fetch('/api/cart/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({
+                        dish_id: dishId,
+                        quantity: 1
+                    })
+                });
+
+                if (response.ok) {
+                    const cartData = await response.json();
+                    const totalItems = cartData.items.reduce((sum, item) => sum + item.quantity, 0);
+                    if (cartCountElement) {
+                        cartCountElement.textContent = totalItems;
+                    }
+
+                    e.target.textContent = 'Added!';
+                    setTimeout(() => { e.target.textContent = 'Add to cart'; }, 1000);
+                } else {
+                    showGlobalAlert('Failed to add item to cart.', 'danger');
+                }
+            } catch (error) {
+                console.error('Error adding to cart:', error);
+                showGlobalAlert('An error occurred.', 'danger');
             }
         }
     });

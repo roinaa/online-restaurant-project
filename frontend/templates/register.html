@@ -1,0 +1,60 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Register - Step Ordering{% endblock %}
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Register</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-5 col-md-8">
+                <h2 class="text-center fw-bold mb-4">Create an Account</h2>
+
+                <form id="register-form">
+                    {% csrf_token %}
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="username" placeholder="Username" required>
+                        <label for="username">Username</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="email" placeholder="name@example.com" required>
+                        <label for="email">Email address</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="password" placeholder="Password" required>
+                        <label for="password">Password</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="password-confirm" placeholder="Confirm Password" required>
+                        <label for="password-confirm">Confirm Password</label>
+                    </div>
+
+                    <div id="error-message" class="alert alert-danger" style="display: none;"></div>
+
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-danger btn-lg">Register</button>
+                    </div>
+                </form>
+
+                <p class="text-center mt-3">
+                    Already have an account? <a href="{% url 'login' %}">Login here</a>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    {% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/auth.js' %}"></script>
+{% endblock %}

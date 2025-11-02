@@ -1,0 +1,58 @@
+/* Navbar Styles - ნავიგაციის სტილები */
+
+header.bg-dark {
+    background-color: #212529 !important;
+}
+
+.navbar-brand {
+    line-height: 1;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    margin-right: 1.5rem;
+}
+
+.navbar-brand .logo-step {
+    display: block;
+    font-size: 3rem;
+    font-weight: 650;
+    color: #f0ad4e;
+    line-height: 1;
+    font-style: italic;
+}
+
+.navbar-brand .logo-ordering {
+    display: block;
+    font-size: 2rem;
+    font-weight: 300;
+    color: #f8f9fa;
+    font-style: italic;
+    margin-left: 50px;
+    letter-spacing: 1.5px;
+}
+
+.navbar .btn-danger:hover {
+    background-color: #c9302c;
+}
+
+.navbar-nav .nav-link {
+    color: #ffffff;
+    font-weight: 550;
+    font-size: 1.1rem;
+    transition: color 0.3s ease, border-color 0.3s ease;
+}
+
+.navbar-nav .nav-link:hover {
+    color: #f8f9fa;
+    border-bottom-color: #ffffff;
+}
+
+.navbar-nav .nav-link.active {
+    font-weight: bold;
+    color: #ffffff;
+    border-bottom-color: #FFFFFF;
+}
+
+.navbar-nav.mx-auto .nav-item {
+    margin-left: 0.5rem;
+    margin-right: 0.5rem;
+}

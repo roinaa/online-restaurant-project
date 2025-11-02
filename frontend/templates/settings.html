@@ -1,0 +1,90 @@
+{% extends 'base.html' %}
+{% load static %}
+{% block title %}Account Settings{% endblock %}
+
+{% block styles %}
+
+    {% endblock %}
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Account Settings</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+
+            <div class="col-lg-6 col-md-10 mb-4">
+                <h2 class="text-center fw-bold mb-4">My Profile</h2>
+
+                <div id="profile-success" class="alert alert-success" style="display: none;"></div>
+                <div id="profile-error" class="alert alert-danger" style="display: none;"></div>
+
+                <form id="profile-form">
+                    {% csrf_token %}
+                    <div class="form-floating mb-3">
+                        <input type="email" class="form-control" id="profile-email" placeholder="Email" readonly>
+                        <label for="profile-email">Email</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="profile-username" placeholder="Username" required>
+                        <label for="profile-username">Username</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="profile-phone" placeholder="Phone Number">
+                        <label for="profile-phone">Phone Number</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="profile-address" placeholder="Address Line 1">
+                        <label for="profile-address">Address Line 1</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="text" class="form-control" id="profile-city" placeholder="City">
+                        <label for="profile-city">City</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-danger btn-lg">Save Profile</button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="col-lg-6 col-md-10 mb-4">
+                <h2 class="text-center fw-bold mb-4">Change Password</h2>
+
+                <div id="password-success" class="alert alert-success" style="display: none;"></div>
+                <div id="password-error" class="alert alert-danger" style="display: none;"></div>
+
+                <form id="password-form">
+                    {% csrf_token %}
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="old-password" placeholder="Old Password" required>
+                        <label for="old-password">Old Password</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="new-password" placeholder="New Password" required>
+                        <label for="new-password">New Password</label>
+                    </div>
+                    <div class="form-floating mb-3">
+                        <input type="password" class="form-control" id="confirm-password" placeholder="Confirm New Password" required>
+                        <label for="confirm-password">Confirm New Password</label>
+                    </div>
+                    <div class="d-grid">
+                        <button type="submit" class="btn btn-secondary btn-lg">Change Password</button>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/settings.js' %}"></script>
+{% endblock %}

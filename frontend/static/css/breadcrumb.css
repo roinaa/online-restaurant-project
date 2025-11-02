@@ -1,0 +1,33 @@
+/* Breadcrumb Styles - ბრედქრამბის სტილები */
+
+.breadcrumb-bar {
+    background-color: #E60000;
+    padding: 0.75rem 0;
+}
+
+.breadcrumb-bar .breadcrumb {
+    --bs-breadcrumb-divider-color: #f8f9fa;
+}
+
+.breadcrumb-bar .breadcrumb-item + .breadcrumb-item::before {
+    padding-right: 2rem;
+}
+
+.breadcrumb-bar .breadcrumb-item + .breadcrumb-item {
+    padding-left: 2rem;
+}
+
+.breadcrumb-bar .breadcrumb-item a {
+    color: #ffffff;
+    text-decoration: none;
+    font-weight: 800;
+}
+
+.breadcrumb-bar .breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-bar .breadcrumb-item.active {
+    color: #FFD700;
+    font-weight: 800;
+}

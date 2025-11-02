@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block styles %}
+    {% endblock %}
+
+{% block title %}Menu - Step Ordering{% endblock %}
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Menu</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+
+        <div id="categories-container">
+            <h2 class="text-center fw-bold mb-4">Categories</h2>
+            <div id="category-links" class="nav justify-content-center mb-3">
+                </div>
+            <hr class="category-divider">
+        </div>
+
+        <div class="row mt-5">
+            <div class="col-lg-3 col-md-4">
+                <div class="filter-box">
+                    <h3 class="filter-title">
+                        Filter <i class="bi bi-funnel-fill ms-auto"></i>
+                    </h3>
+
+                    <form id="filter-form">
+                        <div class="mb-4">
+                            <label for="filter-spiciness" class="form-label" id="spiciness-label">Spiciness: Not Chosen</label>
+                            <input type="range" class="form-range" id="filter-spiciness" min="0" max="5" value="0">
+                        </div>
+
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" value="" id="filter-nuts">
+                            <label class="form-check-label" for="filter-nuts">
+                                No Nuts
+                            </label>
+                        </div>
+                        <div class="form-check mb-4">
+                            <input class="form-check-input" type="checkbox" value="" id="filter-vegetarian">
+                            <label class="form-check-label" for="filter-vegetarian">
+                                Vegetarian Only
+                            </label>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button type="reset" class="btn btn-reset" id="reset-filter">RESET</button>
+                            <button type="submit" class="btn btn-apply" id="apply-filter">APPLY FILTER</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="col-lg-9 col-md-8">
+                <div id="dishes-container" class="row">
+                    </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/main.js' %}"></script>
+{% endblock %}

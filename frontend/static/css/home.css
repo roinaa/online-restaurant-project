@@ -1,0 +1,113 @@
+/* Home Page Styles - მთავარი გვერდის სტილები */
+
+/* Hero Section */
+.hero-section-main {
+    background-color: #f8f9fa;
+    padding: 4rem;
+
+    position: relative;
+}
+
+.hero-section-main .container {
+    position: relative;
+    z-index: 2;
+}
+
+.hero-text-small {
+    font-size: 1.25rem;
+    font-weight: 500;
+    color: #555;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.hero-text-large {
+    font-size: 3.5rem;
+    font-weight: 700;
+    color: #212529;
+    margin: 0.5rem 0;
+    line-height: 1.2;
+}
+
+.hero-text-large span {
+    display: block;
+    font-size: 4.5rem;
+    color: #E60000;
+}
+
+.btn-hero {
+    background-color: #ffffff;
+    color: #E60000;
+    border: 2px solid #E60000;
+    font-weight: bold;
+    text-transform: uppercase;
+    border-radius: 50px;
+    padding: 0.75rem 2rem;
+    transition: all 0.3s ease;
+    z-index: 3;
+    position: relative;
+}
+
+.btn-hero:hover {
+    background-color: #E60000;
+    color: #ffffff;
+    border-color: #E60000;
+}
+
+.hero-img-left,
+.hero-img-right {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 50%;
+    max-width: 800px;
+    z-index: 1;
+}
+
+.hero-img-left {
+    left: 0%;
+    top: 95%;
+}
+
+.hero-img-right {
+    right: 0%;
+    top: 105%;
+}
+
+@media (max-width: 992px) {
+    .hero-img-left,
+    .hero-img-right {
+        display: none;
+    }
+    .hero-text-large {
+        font-size: 2.5rem;
+    }
+    .hero-text-large span {
+        font-size: 3.5rem;
+    }
+}
+
+.featured-dishes-section {
+    margin-top: 25rem !important;
+}
+
+@media (min-width: 992px) {
+    .featured-dishes-section {
+        margin-top: 10rem;
+    }
+}
+
+#featuredDishCarousel .carousel-control-prev-icon,
+#featuredDishCarousel .carousel-control-next-icon {
+    background-color: #555;
+    border-radius: 50%;
+    padding: 1.5rem;
+}
+
+#featuredDishCarousel .carousel-control-prev {
+    left: -50px;
+}
+
+#featuredDishCarousel .carousel-control-next {
+    right: -50px;
+}

@@ -1,0 +1,33 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Order History - Step Ordering{% endblock %}
+
+{% block styles %}
+    <link rel="stylesheet" href="{% static 'css/cart.css' %}">
+{% endblock %}
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Order History</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <h2 class="text-center fw-bold mb-4">My Order History</h2>
+
+        <div id="order-history-container">
+            <p class="text-center text-muted">Loading your order history...</p>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/history.js' %}"></script>
+{% endblock %}

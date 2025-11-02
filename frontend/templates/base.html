@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+{% load static %}
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Step Ordering{% endblock %}</title>
+
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap/css/bootstrap.min.css' %}">
+    <link rel="stylesheet" href="{% static 'vendor/bootstrap-icons/bootstrap-icons.css' %}">
+
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+
+    {% block styles %}{% endblock %}
+</head>
+<body>
+
+    <header class="bg-dark text-white">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="{% url 'home' %}"><span class="logo-step">Step</span>
+                    <span class="logo-ordering">Ordering</span>
+                </a>
+
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <div class="collapse navbar-collapse" id="navbarNav">
+                    <ul class="navbar-nav mx-auto"> <li class="nav-item">
+                            <a class="nav-link" href="{% url 'home' %}">Home</a> </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'menu' %}">Menu</a> </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'cart' %}">My Cart</a> </li>
+                    </ul>
+
+                    <ul class="navbar-nav d-flex align-items-center">
+
+                        <li class="nav-item auth-links">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a> </li>
+                        <li class="nav-item auth-links">
+                            <a class="btn btn-danger" href="{% url 'register' %}">Register</a> </li>
+
+                        <li class="nav-item dropdown user-links" style="display: none;">
+                            <a class="nav-link dropdown-toggle" href="#" id="accountDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                Account
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="accountDropdown">
+                                <li><a class="dropdown-item" href="{% url 'settings' %}">Account Settings</a></li> <li><a class="dropdown-item" href="{% url 'history' %}">Order History</a></li> <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="#" id="logout-button">Logout</a></li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+
+   <main> {% block content %}
+    {% endblock %}</main>
+
+    <div class="modal fade" id="globalAlertModal" tabindex="-1" aria-labelledby="globalAlertModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="globalAlertModalLabel">Message</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="globalAlertModalBody">
+                    </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">OK</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <footer class="site-footer">
+        <div class="container">
+            <p>&copy; Step Ordering 2025, All rights reserved</p>
+        </div>
+    </footer>
+
+    <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <script src="{% static 'js/app.js' %}"></script>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
