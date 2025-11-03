@@ -122,6 +122,11 @@ document.addEventListener('DOMContentLoaded', () => {
                 <img src="${imageUrl}" class="dish-card-img-top" alt="${dish.name}">
                 <div class="dish-card-body">
                     <h5 class="dish-card-title">${dish.name}</h5>
+                    <div class="dish-rating mb-2">
+                        <i class="bi bi-star-fill text-warning"></i>
+                        <strong>${dish.average_rating} / 5.0</strong>
+                        <span class="text-muted" style="font-size: 0.9rem;">(${dish.review_count} reviews)</span>
+                    </div>
                     <div class="dish-spiciness">
                         Spiciness: ${dish.spiciness_display || dish.spiciness}
                     </div>

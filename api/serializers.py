@@ -16,7 +16,7 @@ class DishSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dish
         fields = ['id', 'category', 'name', 'image', 'price',
-                  'spiciness', 'spiciness_display', 'has_nuts', 'is_vegetarian', 'description']
+                  'spiciness', 'spiciness_display', 'has_nuts', 'is_vegetarian', 'description', 'average_rating', 'review_count']
 
 
 # ახალი მომხმარებლის რეგისტრაციის სერიალიზატორი
@@ -28,14 +28,12 @@ class UserSerializer(serializers.ModelSerializer):
                         'email': {'required': True}}
 
     def create(self, validated_data):
-        # ვიყენებთ Django-ს მზა მეთოდს, რომელიც ქმნის მომხმარებელს
-        # და ავტომატურად შიფრავს (encrypts) პაროლს.
         user = User.objects.create_user(
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password']
         )
-        # მომხმარებლის შექმნასთან ერთად, ავტომატურად ვუქმნით მას Token-ს (გასაღებს)
+        # მომხმარებლის შექმნასთან ერთად, ავტომატურად ვუქმნით მას Token-ს
         Token.objects.create(user=user)
         return user
 
@@ -67,13 +65,23 @@ class OrderItemSerializer(serializers.ModelSerializer):
     dish_image = serializers.ImageField(source='dish.image', read_only=True)
     dish_price = serializers.DecimalField(source='dish.price', max_digits=10, decimal_places=2, read_only=True)
 
+    is_reviewed = serializers.SerializerMethodField()
+
     class Meta:
         model = OrderItem
-        fields = ('id', 'dish', 'dish_name', 'dish_image', 'dish_price', 'quantity', 'price_at_order')
+        fields = ('id', 'dish', 'dish_name', 'dish_image', 'dish_price', 'quantity', 'price_at_order', 'is_reviewed')
         read_only_fields = ('price_at_order',)
-        extra_kwargs = {
-            'dish': {'write_only': True}
-        }
+
+    def get_is_reviewed(self, obj):
+        user = obj.order.user
+        dish = obj.dish
+
+        if not user or not dish:
+            return False
+
+        # ვამოწმებთ, არსებობს თუ არა Review მოდელში ასეთი ჩანაწერი
+        return Review.objects.filter(user=user, dish=dish).exists()
+
 
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
@@ -112,3 +120,24 @@ class UserProfileSerializer(serializers.ModelSerializer):
         instance.save()
 
         return instance
+
+
+# შეფასების დამატება
+class ReviewSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Review
+        fields = ('id', 'dish', 'rating', 'comment', 'created_at')
+        read_only_fields = ('id', 'created_at',)
+        extra_kwargs = {
+            'dish': {'write_only': True},
+            'rating': {'required': True},
+        }
+
+    def validate(self, data):
+        data['user'] = self.context['request'].user
+
+        # ვამოწმებთ unique_together შეზღუდვას
+        if Review.objects.filter(user=data['user'], dish=data['dish']).exists():
+            raise serializers.ValidationError("You have already reviewed this dish.")
+
+        return data

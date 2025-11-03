@@ -54,6 +54,10 @@ class Dish(models.Model):
             return round(rating, 1)
         return 0
 
+    @property
+    def review_count(self):
+        return self.reviews.count()
+
 class UserProfile(models.Model):
     # OneToOneField ნიშნავს, რომ ერთ User-ს შეუძლია ჰქონდეს მხოლოდ ერთი UserProfile
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
@@ -65,7 +69,6 @@ class UserProfile(models.Model):
         return f"{self.user.username}'s Profile"
 
 class Order(models.Model):
-    # მოდელი, რომელიც ინახავს როგორც აქტიურ კალათას (pending), ასევე დასრულებულ შეკვეთებს (completed).
     STATUS_CHOICES = [
         ('pending', 'Pending (Cart)'),
         ('completed', 'Completed'),
@@ -108,7 +111,7 @@ class OrderItem(models.Model):
 
 class Review(models.Model):
 
-    #მოდელი კერძების შეფასებებისთვის.
+    # მოდელი კერძების შეფასებებისთვის.
     RATING_CHOICES = [
         (1, '1 - Poor'),
         (2, '2 - Fair'),

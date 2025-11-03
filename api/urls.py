@@ -11,6 +11,7 @@ from .views import (
     FeaturedDishListView,
     UserProfileView,
     ChangePasswordView,
+    ReviewCreateView
 )
 
 urlpatterns = [
@@ -25,4 +26,5 @@ urlpatterns = [
     path('featured-dishes/', FeaturedDishListView.as_view(), name='featured-dishes'),
     path('profile/', UserProfileView.as_view(), name='user-profile'),
     path('profile/change-password/', ChangePasswordView.as_view(), name='change-password'),
+    path('reviews/add/', ReviewCreateView.as_view(), name='review-add'),
 ]
