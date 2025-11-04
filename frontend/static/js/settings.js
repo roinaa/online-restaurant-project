@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
 
     const token = localStorage.getItem('authToken');
+    const csrftoken = getCookie('csrftoken');
 
     //პროფილის ფორმის ველები
     const profileForm = document.getElementById('profile-form');
@@ -19,22 +20,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const confirmPasswordField = document.getElementById('confirm-password');
     const passwordError = document.getElementById('password-error');
     const passwordSuccess = document.getElementById('password-success');
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
-    const csrftoken = getCookie('csrftoken');
 
     // პროფილის მონაცემების ჩატვირთვა გვერდის გახსნისას
     async function loadProfile() {

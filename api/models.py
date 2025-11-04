@@ -3,7 +3,6 @@ from django.utils.text import slugify
 from django.contrib.auth.models import User
 
 
-# Django-ს User მოდელის 'email' ველის გადატვირთვა, რომ უნიკალური და სავალდებულო გახდეს
 User._meta.get_field('email')._unique = True
 User._meta.get_field('email').blank = False
 User._meta.get_field('email').null = False

@@ -1,6 +1,6 @@
 document.addEventListener('DOMContentLoaded', () => {
 
-    function getCookie(name) {
+    window.getCookie = function(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
             const cookies = document.cookie.split(';');

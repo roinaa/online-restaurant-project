@@ -1,7 +1,24 @@
 document.addEventListener('DOMContentLoaded', () => {
 
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
     const featuredContainer = document.getElementById('featured-dishes-container');
     const API_FEATURED_URL = '/api/featured-dishes/';
+
+    const csrftoken = getCookie('csrftoken');
 
     // რჩეული კერძების წამოღება
     async function fetchFeaturedDishes() {
@@ -106,7 +123,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return col;
     }
 
-    const csrftoken = getCookie('csrftoken');
     const cartCountElement = document.getElementById('cart-count');
 
     featuredContainer.addEventListener('click', async (e) => {
@@ -123,7 +139,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const dishId = e.target.dataset.dishId;
 
             try {
-                const response = await fetch('/api/cart/add/', {
+                const response = await fetch('/api/cart/', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -150,21 +166,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     });
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
 
 
     fetchFeaturedDishes();

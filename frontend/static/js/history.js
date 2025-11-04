@@ -12,24 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reviewComment = document.getElementById('review-comment');
     const reviewDishId = document.getElementById('review-dish-id');
     const reviewErrorMessage = document.getElementById('review-error-message');
-    // ---
 
-    // Django-ს CSRF Token-ის წამოსაღები ფუნქცია
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
+
+
     const csrftoken = getCookie('csrftoken');
+
 
     // შეკვეთების ისტორიის ჩატვირთვა
     async function loadOrderHistory() {

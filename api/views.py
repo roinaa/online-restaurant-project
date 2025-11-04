@@ -1,16 +1,20 @@
-from rest_framework import generics
-from .models import DishCategory, Dish
-from .serializers import DishCategorySerializer, DishSerializer, UserSerializer, LoginSerializer
-from rest_framework import filters
 from django.contrib.auth.models import User
-from rest_framework.authtoken.models import Token
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status
-from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Order, OrderItem, UserProfile, Review
-from .serializers import OrderSerializer, UserProfileSerializer, ReviewSerializer
+from rest_framework import generics, filters, status
 from rest_framework.authentication import TokenAuthentication
+from rest_framework.authtoken.models import Token
+from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Review
+from .serializers import (
+    DishCategorySerializer,
+    DishSerializer,
+    UserSerializer,
+    LoginSerializer,
+    OrderSerializer,
+    UserProfileSerializer,
+    ReviewSerializer
+)
 
 
 class DishCategoryListAPIView(generics.ListAPIView):

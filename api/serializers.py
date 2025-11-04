@@ -43,6 +43,7 @@ class LoginSerializer(serializers.Serializer):
     password = serializers.CharField()
 
     def validate(self, data):
+
         email = data.get('email')
         password = data.get('password')
 
@@ -52,11 +53,9 @@ class LoginSerializer(serializers.Serializer):
                 user = authenticate(username=user_obj.username, password=password)
             except User.DoesNotExist:
                 user = None
-
             if user and user.is_active:
                 data['user'] = user
                 return data
-
         raise serializers.ValidationError("Incorrect Credentials. Please try again.")
 
 
@@ -102,7 +101,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         # განვაახლოთ User მოდელი (username)
-        # ამოვიღოთ 'user' მონაცემები validated_data-დან
         user_data = validated_data.pop('user', {})
         username = user_data.get('username')
 

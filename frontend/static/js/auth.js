@@ -3,24 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const registerForm = document.getElementById('register-form');
     const loginForm = document.getElementById('login-form');
     const errorMessage = document.getElementById('error-message');
-
-    // Django-ს CSRF Token-ის წამოსაღები ფუნქცია
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
-                }
-            }
-        }
-        return cookieValue;
-    }
     const csrftoken = getCookie('csrftoken');
-
 
     // რეგისტრაციის ლოგიკა
     if (registerForm) {
