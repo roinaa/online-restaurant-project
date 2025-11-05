@@ -1,11 +1,33 @@
 from django.db import models
 from django.utils.text import slugify
 from django.contrib.auth.models import User
+from decimal import Decimal
 
 
 User._meta.get_field('email')._unique = True
 User._meta.get_field('email').blank = False
 User._meta.get_field('email').null = False
+
+
+class Coupon(models.Model):
+    code = models.CharField(max_length=50, unique=True)
+    discount_percent = models.PositiveIntegerField(
+        help_text="Discount percentage (e.g., 10 for 10%)"
+    )
+    is_active = models.BooleanField(default=True)
+    valid_from = models.DateTimeField(auto_now_add=True)
+    valid_to = models.DateTimeField(
+        null=True, blank=True,
+        help_text="Leave blank for no expiration date"
+    )
+    one_use_per_user = models.BooleanField(
+        default=True,
+        help_text="If checked, a user can only use this coupon code once."
+    )
+
+    def __str__(self):
+        return f"{self.code} ({self.discount_percent}%)"
+
 
 class DishCategory(models.Model):
     name = models.CharField(max_length=100, unique=True)
@@ -75,6 +97,7 @@ class Order(models.Model):
     ]
     # კავშირი მომხმარებელთან
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='orders')
+    coupon = models.ForeignKey(Coupon, related_name='orders', on_delete=models.SET_NULL, null=True, blank=True )
     created_at = models.DateTimeField(auto_now_add=True)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
     total_price = models.DecimalField(max_digits=10, decimal_places=2, default=0.00)
@@ -85,7 +108,14 @@ class Order(models.Model):
     # ფუნქცია, რომელიც გადაითვლის კალათის/შეკვეთის ჯამურ ფასს
     def calculate_total(self):
         total = sum(item.get_total_price() for item in self.items.all())
-        self.total_price = total
+
+        if self.coupon and self.coupon.is_active:
+
+            discount_multiplier = Decimal(self.coupon.discount_percent) / Decimal(100)
+            discount_amount = total * discount_multiplier
+            total = total - discount_amount
+
+        self.total_price = round(total, 2)
         self.save()
         return total
 

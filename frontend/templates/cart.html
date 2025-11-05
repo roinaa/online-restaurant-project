@@ -30,15 +30,30 @@
                 <div id="cart-body">
                     </div>
             </div>
+                <div class="cart-summary">
 
-            <div class="cart-summary">
-                <div class="total-row">
-                    Total : <span id="cart-grand-total">$0.00</span>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Have a Coupon?</label>
+                        <div id="coupon-form">
+                            <div class="input-group">
+                                <input type="text" class="form-control" placeholder="Enter coupon code" id="coupon-input">
+                                <button class="btn btn-outline-danger" type="button" id="apply-coupon-btn">Apply</button>
+                            </div>
+                        </div>
+                        <div id="active-coupon-display" style="display: none;">
+                            </div>
+                        <div id="coupon-message" class="mt-2">
+                            </div>
+                    </div>
+
+                    <div class="total-row">
+                        Total : <span id="cart-grand-total">$0.00</span>
+                    </div>
+
+                    <div class="checkout-row">
+                        <button class="btn btn-proceed-checkout" id="proceed-to-checkout">PROCEED TO CHECKOUT</button>
+                    </div>
                 </div>
-                <div class="checkout-row">
-                    <button class="btn btn-proceed-checkout" id="proceed-to-checkout">PROCEED TO CHECKOUT</button>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -59,6 +74,25 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="removeCouponConfirmModal" tabindex="-1" aria-labelledby="removeCouponModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="removeCouponModalLabel">Confirm Removal</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    This coupon is already applied. Do you want to remove it?
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-danger" id="confirm-remove-coupon-btn">Yes, Remove Coupon</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
 
 {% endblock %}
 

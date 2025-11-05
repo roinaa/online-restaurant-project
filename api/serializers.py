@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review
+from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
@@ -17,6 +17,12 @@ class DishSerializer(serializers.ModelSerializer):
         model = Dish
         fields = ['id', 'category', 'name', 'image', 'price',
                   'spiciness', 'spiciness_display', 'has_nuts', 'is_vegetarian', 'description', 'average_rating', 'review_count']
+
+
+class CouponSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Coupon
+        fields = ('code', 'discount_percent')
 
 
 # ახალი მომხმარებლის რეგისტრაციის სერიალიზატორი
@@ -85,9 +91,11 @@ class OrderItemSerializer(serializers.ModelSerializer):
 class OrderSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
 
+    coupon = CouponSerializer(read_only=True)
+
     class Meta:
         model = Order
-        fields = ('id', 'user', 'created_at', 'status', 'total_price', 'items')
+        fields = ('id', 'user', 'created_at', 'status', 'total_price', 'coupon', 'items')
         read_only_fields = ('user', 'total_price', 'created_at')
 
 

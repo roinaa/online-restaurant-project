@@ -8,6 +8,15 @@ document.addEventListener('DOMContentLoaded', () => {
     const bsCheckoutModal = new bootstrap.Modal(checkoutModalElement);
     const confirmOrderBtn = document.getElementById('confirm-order-btn');
 
+    const couponInput = document.getElementById('coupon-input');
+    const applyCouponBtn = document.getElementById('apply-coupon-btn');
+    const couponMessage = document.getElementById('coupon-message');
+    const couponForm = document.getElementById('coupon-form');
+    const activeCouponDisplay = document.getElementById('active-coupon-display');
+    const removeCouponModalElement = document.getElementById('removeCouponConfirmModal');
+    const bsRemoveCouponModal = new bootstrap.Modal(removeCouponModalElement);
+    const confirmRemoveCouponBtn = document.getElementById('confirm-remove-coupon-btn');
+
     const token = localStorage.getItem('authToken');
 
     const csrftoken = getCookie('csrftoken');
@@ -80,7 +89,29 @@ document.addEventListener('DOMContentLoaded', () => {
             grandTotalElement.textContent = `$${parseFloat(cartData.total_price).toFixed(2)}`;
         }
         updateCartCounter(cartData);
+
+        if (cartData.coupon) {
+            // თუ კუპონი გამოყენებულია
+            couponForm.style.display = 'none'; // დამალე შეყვანის ველი
+            activeCouponDisplay.style.display = 'block'; // აჩვენე აქტიური კუპონის ბლოკი
+            activeCouponDisplay.innerHTML = `
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <span>
+                        Applied: <strong>${cartData.coupon.code}</strong> (-${cartData.coupon.discount_percent}%)
+                    </span>
+                    <button class="btn-close" id="remove-active-coupon-btn" title="Remove Coupon"></button>
+                </div>
+            `;
+            // წაშლის ღილაკს დავამატოთ ლოგიკა
+            document.getElementById('remove-active-coupon-btn').addEventListener('click', removeCoupon);
+        } else {
+            // თუ კუპონი არ არის გამოყენებული
+            couponForm.style.display = 'block'; // აჩვენე შეყვანის ველი
+            activeCouponDisplay.style.display = 'none'; // დამალე აქტიური კუპონის ბლოკი
+        }
     }
+
+
 
 
     function createCartItemRow(item) {
@@ -238,4 +269,89 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     loadCartItems();
+
+
+    // კუპონის წაშლის ფუნქცია
+    async function removeCoupon() {
+        couponMessage.textContent = 'Removing coupon...';
+        couponMessage.className = 'mt-2 text-info';
+
+        try {
+            const response = await fetch('/api/cart/remove-coupon/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Token ${token}`,
+                    'X-CSRFToken': csrftoken
+                }
+            });
+
+            const data = await response.json();
+            if (response.ok) {
+                renderCart(data);
+                couponMessage.textContent = 'Coupon removed.';
+                setTimeout(() => { couponMessage.textContent = '' }, 3000);
+            } else {
+                couponMessage.textContent = data.error || 'Failed to remove coupon.';
+                couponMessage.className = 'mt-2 text-danger';
+            }
+        } catch (error) {
+            couponMessage.textContent = 'An error occurred while removing the coupon.';
+            couponMessage.className = 'mt-2 text-danger';
+        }
+    }
+
+    // Modal-ის დადასტურების ღილაკის ლოგიკა
+    if (confirmRemoveCouponBtn) {
+        confirmRemoveCouponBtn.addEventListener('click', () => {
+            bsRemoveCouponModal.hide();
+            removeCoupon();
+        });
+    }
+
+    // კუპონის დამატების ლოგიკა
+    if (applyCouponBtn) {
+        applyCouponBtn.addEventListener('click', async () => {
+            const code = couponInput.value.trim();
+            if (!code) return;
+
+            applyCouponBtn.disabled = true;
+            applyCouponBtn.textContent = 'Applying...';
+            couponMessage.textContent = '';
+
+            try {
+                const response = await fetch('/api/cart/apply-coupon/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Token ${token}`, 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({ coupon_code: code })
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    renderCart(data);
+                    couponInput.value = '';
+                    couponMessage.textContent = 'Coupon applied successfully!';
+                    couponMessage.className = 'mt-2 text-success';
+                    setTimeout(() => {
+                        couponMessage.textContent = '';
+                    }, 3000);
+                } else {
+                    if (response.status === 409) {
+                        bsRemoveCouponModal.show();
+                    } else {
+                        couponMessage.textContent = data.error || 'Invalid coupon code.';
+                        couponMessage.className = 'mt-2 text-danger';
+                    }
+                }
+            } catch (error) {
+                couponMessage.textContent = 'An error occurred.';
+                couponMessage.className = 'mt-2 text-danger';
+            } finally {
+                applyCouponBtn.disabled = false;
+                applyCouponBtn.textContent = 'Apply';
+            }
+        });
+    }
+
 });

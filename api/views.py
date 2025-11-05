@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Review
+from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Review, Coupon
 from .serializers import (
     DishCategorySerializer,
     DishSerializer,
@@ -303,3 +303,69 @@ class ReviewCreateView(APIView):
             return Response({"error": "Dish not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+
+
+class ApplyCouponView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        coupon_code = request.data.get('coupon_code')
+        user = request.user
+
+        try:
+            cart = Order.objects.get(user=user, status='pending')
+        except Order.DoesNotExist:
+            return Response({"error": "You have no active cart."}, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            coupon = Coupon.objects.get(code__iexact=coupon_code, is_active=True)
+        except Coupon.DoesNotExist:
+            return Response({"error": "Invalid coupon code."}, status=status.HTTP_404_NOT_FOUND)
+
+        if coupon.one_use_per_user:
+            has_used_before = Order.objects.filter(
+                user=user,
+                coupon=coupon,
+                status='completed'
+            ).exists()
+            if has_used_before:
+                return Response({"error": "You have already used this coupon code."}, status=status.HTTP_400_BAD_REQUEST)
+
+        if cart.coupon == coupon:
+            return Response(
+           {"error": "This coupon is already applied."},
+                 status=status.HTTP_409_CONFLICT
+            )
+
+        cart.coupon = coupon
+        cart.calculate_total()
+        cart.save()
+
+        serializer = OrderSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class RemoveCouponView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+
+        try:
+            cart = Order.objects.get(user=user, status='pending')
+        except Order.DoesNotExist:
+            return Response({"error": "You have no active cart."}, status=status.HTTP_404_NOT_FOUND)
+
+        if not cart.coupon:
+            return Response({"error": "No coupon is applied to this cart."}, status=status.HTTP_400_BAD_REQUEST)
+
+        cart.coupon = None
+        cart.calculate_total()
+        cart.save()
+
+        serializer = OrderSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)

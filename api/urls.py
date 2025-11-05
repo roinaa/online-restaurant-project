@@ -11,7 +11,9 @@ from .views import (
     FeaturedDishListView,
     UserProfileView,
     ChangePasswordView,
-    ReviewCreateView
+    ReviewCreateView,
+    ApplyCouponView,
+    RemoveCouponView
 )
 
 urlpatterns = [
@@ -21,6 +23,8 @@ urlpatterns = [
     path('login/', LoginView.as_view(), name='auth-login'),
     path('logout/', LogoutView.as_view(), name='auth-logout'),
     path('cart/', CartView.as_view(), name='cart-api'),
+    path('cart/apply-coupon/', ApplyCouponView.as_view(), name='apply-coupon'),
+    path('cart/remove-coupon/', RemoveCouponView.as_view(), name='remove-coupon'),
     path('orders/place/', PlaceOrderView.as_view(), name='place-order'),
     path('orders/history/', OrderHistoryView.as_view(), name='order-history'),
     path('featured-dishes/', FeaturedDishListView.as_view(), name='featured-dishes'),

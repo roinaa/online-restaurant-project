@@ -1,6 +1,6 @@
 from django.contrib import admin
 # დავაიმპორტოთ ყველა ჩვენი მოდელი
-from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review
+from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon
 
 @admin.register(DishCategory)
 class DishCategoryAdmin(admin.ModelAdmin):
@@ -36,3 +36,9 @@ class ReviewAdmin(admin.ModelAdmin):
     list_display = ('dish', 'user', 'rating', 'created_at')
     list_filter = ('rating', 'created_at')
     search_fields = ('user__username', 'dish__name', 'comment')
+
+@admin.register(Coupon)
+class CouponAdmin(admin.ModelAdmin):
+    list_display = ('code', 'discount_percent', 'is_active', 'valid_to', 'one_use_per_user')
+    list_filter = ('is_active', 'one_use_per_user')
+    search_fields = ('code',)
