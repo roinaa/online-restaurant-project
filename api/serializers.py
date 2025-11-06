@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon
+from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon, Table, Reservation
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
@@ -142,8 +142,41 @@ class ReviewSerializer(serializers.ModelSerializer):
     def validate(self, data):
         data['user'] = self.context['request'].user
 
-        # ვამოწმებთ unique_together შეზღუდვას
         if Review.objects.filter(user=data['user'], dish=data['dish']).exists():
             raise serializers.ValidationError("You have already reviewed this dish.")
 
         return data
+
+
+class TableSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Table
+        fields = ('id', 'name', 'capacity')
+
+
+class ReservationSerializer(serializers.ModelSerializer):
+    table = TableSerializer(read_only=True)
+    start_time_display = serializers.DateTimeField(source='start_time', format='%Y-%m-%d %H:%M')
+    end_time_display = serializers.DateTimeField(source='end_time', format='%Y-%m-%d %H:%M')
+
+    class Meta:
+        model = Reservation
+        fields = (
+            'id',
+            'table',
+            'party_size',
+            'start_time_display',
+            'end_time_display',
+            'status'
+        )
+
+
+class CreateReservationSerializer(serializers.ModelSerializer):
+    date = serializers.DateField(write_only=True)
+    start_time_str = serializers.TimeField(write_only=True, source='start_time')
+    end_time_str = serializers.TimeField(write_only=True)
+
+    class Meta:
+        model = Reservation
+        fields = ('party_size', 'date', 'start_time_str', 'end_time_str')

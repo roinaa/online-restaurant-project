@@ -1,0 +1,56 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}My Reservations - Step Ordering{% endblock %}
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">My Reservations</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <h2 class="text-center fw-bold mb-4">My Reservations</h2>
+        
+        <h3 class="fw-bold mb-3">Active Reservations</h3>
+        <div id="active-reservations-container">
+            <p class="text-muted">Loading your active reservations...</p>
+        </div>
+        
+        <hr class="my-5">
+        
+        <h3 class="fw-bold mb-3">Past Reservations</h3>
+        <div id="past-reservations-container">
+            <p class="text-muted">Loading your reservation history...</p>
+        </div>
+    </div>
+
+    </div> <div class="modal fade" id="cancelReservationModal" tabindex="-1" aria-labelledby="cancelModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="cancelModalLabel">Confirm Cancellation</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    Are you sure you want to cancel this reservation? This action cannot be undone.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">No, Keep It</button>
+                    <button type="button" class="btn btn-danger" id="confirm-cancel-btn">Yes, Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock %}
+
+{% block scripts %}
+        <script src="{% static 'js/my_reservations.js' %}"></script>
+    {% endblock %}

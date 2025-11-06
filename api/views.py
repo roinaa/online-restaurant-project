@@ -5,7 +5,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Review, Coupon
+from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Coupon, Table, OperatingHours, Reservation
 from .serializers import (
     DishCategorySerializer,
     DishSerializer,
@@ -13,8 +13,13 @@ from .serializers import (
     LoginSerializer,
     OrderSerializer,
     UserProfileSerializer,
-    ReviewSerializer
+    ReviewSerializer,
+    ReservationSerializer,
+    CreateReservationSerializer
 )
+
+import datetime
+from django.utils import timezone
 
 
 class DishCategoryListAPIView(generics.ListAPIView):
@@ -229,13 +234,10 @@ class UserProfileView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 class FeaturedDishListView(generics.ListAPIView):
     queryset = Dish.objects.filter(is_featured=True)
     serializer_class = DishSerializer
     permission_classes = (AllowAny,)
-
-
 
 
 class ChangePasswordView(APIView):
@@ -255,6 +257,12 @@ class ChangePasswordView(APIView):
         # ვამოწმებთ, ახალი პაროლები ემთხვევა თუ არა
         if new_password != new_password_confirm:
             return Response({"new_password": ["New passwords do not match."]}, status=status.HTTP_400_BAD_REQUEST)
+
+        if user.check_password(new_password):
+            return Response(
+                {"new_password": ["Your new password cannot be the same as your old password."]},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
         if len(new_password) < 8:
              return Response({"new_password": ["Password must be at least 8 characters long."]}, status=status.HTTP_400_BAD_REQUEST)
@@ -303,8 +311,6 @@ class ReviewCreateView(APIView):
             return Response({"error": "Dish not found."}, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-
-
 
 
 class ApplyCouponView(APIView):
@@ -369,3 +375,193 @@ class RemoveCouponView(APIView):
 
         serializer = OrderSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+class GetAvailabilityView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        date_str = request.query_params.get('date')
+        table_id = request.query_params.get('table_id')
+
+        if not date_str or not table_id:
+            return Response({"error": "Date and Table ID are required."}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+            table = Table.objects.get(id=table_id)
+        except (ValueError, Table.DoesNotExist):
+            return Response({"error": "Invalid date or table ID."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ვპოულობ ამ დღის სამუშაო საათებს
+        try:
+            hours = OperatingHours.objects.get(weekday=date.weekday())
+            open_time = hours.open_time
+            close_time = hours.close_time
+        except OperatingHours.DoesNotExist:
+            return Response({"error": "Restaurant is closed on this day."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # ვპოულობ ამ მაგიდის ყველა დადასტურებულ ჯავშანს ამ დღეს
+        reservations = Reservation.objects.filter(
+            table=table,
+            status='Confirmed',
+            start_time__date=date
+        ).values_list('start_time', 'end_time')
+
+        # 30 წუთიანი სლოტების გენერირება
+        slots = []
+        current_time = timezone.make_aware(datetime.datetime.combine(date, open_time))
+        end_datetime = timezone.make_aware(datetime.datetime.combine(date, close_time))
+
+        while current_time < end_datetime:
+            slot_time = current_time.time()
+            is_available = True
+
+            # მოწმდება ხომ არ ემთხვევა სლოტი არსებულ ჯავშანს
+            for start, end in reservations:
+                # მომწდება თუ სლოტი არსებული ჯავშნის შიგნით ექცევა
+                if current_time >= start and current_time < end:
+                    is_available = False
+                    break
+
+            if date == timezone.now().date() and current_time < timezone.now():
+                is_available = False
+
+            slots.append({"time": slot_time.strftime('%H:%M'), "available": is_available})
+            current_time += datetime.timedelta(minutes=30)
+
+        return Response(slots, status=status.HTTP_200_OK)
+
+
+class CreateReservationView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        serializer = CreateReservationSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        party_size = data['party_size']
+        date = data['date']
+        start_time_obj = data['start_time']  #
+        end_time_obj = data['end_time_str']
+
+        # მაგიდის მოძებნა
+        try:
+            table = Table.objects.filter(capacity__gte=party_size, is_active=True).order_by('capacity').first()
+            if not table:
+                return Response({"error": f"Sorry, we do not have a table available for {party_size} guests."},
+                                status=status.HTTP_400_BAD_REQUEST)
+        except Table.DoesNotExist:
+            return Response({"error": "No tables found."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # სამუშაო საათები
+        try:
+            hours = OperatingHours.objects.get(weekday=date.weekday())
+
+            start_datetime = timezone.make_aware(datetime.datetime.combine(date, start_time_obj))
+            end_datetime = timezone.make_aware(datetime.datetime.combine(date, end_time_obj))
+
+            # 10 საათიანი ლიმიტის შემოწმება
+            duration = end_datetime - start_datetime
+            if duration.total_seconds() / 3600 > 10:
+                return Response({
+                                    "error": "To book a table for more than 10 hours, please contact the restaurant directly at +123 456 789."},
+                                status=status.HTTP_400_BAD_REQUEST)
+
+            if start_datetime.time() < hours.open_time or end_datetime.time() > hours.close_time:
+                if end_datetime.date() > date or end_datetime.time() > hours.close_time:
+                    return Response({
+                                        "error": f"The restaurant closes at {hours.close_time.strftime('%H:%M')}. Your selected reservation time exceeds operating hours."},
+                                    status=status.HTTP_400_BAD_REQUEST)
+
+            if start_datetime < timezone.now():
+                return Response({"error": "Cannot book a reservation in the past."}, status=status.HTTP_400_BAD_REQUEST)
+
+            if start_datetime >= end_datetime:
+                return Response({"error": "End time must be after start time."}, status=status.HTTP_400_BAD_REQUEST)
+
+        except OperatingHours.DoesNotExist:
+            return Response({"error": "Restaurant is closed on this day."}, status=status.HTTP_400_BAD_REQUEST)
+        except ValueError:
+            return Response({"error": "Invalid time format."}, status=status.HTTP_400_BAD_REQUEST)
+
+        # საბოლოო შემოწმება
+        conflicting_reservations = Reservation.objects.filter(
+            table=table,
+            status='Confirmed',
+            start_time__lt=end_datetime,
+            end_time__gt=start_datetime
+        ).exists()
+
+        if conflicting_reservations:
+            return Response({
+                                "error": "Sorry, one or more time slots in your selected range were just booked by another user. Please refresh and try again."},
+                            status=status.HTTP_409_CONFLICT)
+
+        # ვქმნით ჯავშანს
+        reservation = Reservation.objects.create(
+            user=request.user,
+            table=table,
+            party_size=party_size,
+            start_time=start_datetime,
+            end_time=end_datetime,
+            status='Confirmed'
+        )
+
+        return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
+
+
+
+class ReservationHistoryView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        now = timezone.now()
+
+        active_reservations = Reservation.objects.filter(
+            user=request.user,
+            status='Confirmed',
+            end_time__gte=now
+        ).order_by('start_time')
+
+        past_reservations = Reservation.objects.filter(
+            user=request.user,
+            end_time__lt=now
+        ) | Reservation.objects.filter(
+            user=request.user,
+            status='Cancelled'
+        ).order_by('-start_time')
+
+        data = {
+            "active": ReservationSerializer(active_reservations, many=True).data,
+            "past": ReservationSerializer(past_reservations, many=True).data
+        }
+        return Response(data, status=status.HTTP_200_OK)
+
+
+class CancelReservationView(APIView):
+    authentication_classes = [TokenAuthentication]
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request, pk):
+        try:
+            reservation = Reservation.objects.get(id=pk, user=request.user)
+        except Reservation.DoesNotExist:
+            return Response({"error": "Reservation not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if reservation.start_time <= timezone.now():
+            return Response({"error": "Cannot cancel a reservation that has already started or passed."},
+                            status=status.HTTP_400_BAD_REQUEST)
+
+        if reservation.status == 'Cancelled':
+            return Response({"error": "This reservation is already cancelled."}, status=status.HTTP_400_BAD_REQUEST)
+
+        reservation.status = 'Cancelled'
+        reservation.save()
+
+        return Response(ReservationSerializer(reservation).data, status=status.HTTP_200_OK)

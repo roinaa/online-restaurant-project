@@ -1,6 +1,5 @@
 from django.contrib import admin
-# დავაიმპორტოთ ყველა ჩვენი მოდელი
-from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon
+from .models import DishCategory, Dish, UserProfile, Order, OrderItem, Review, Coupon, Table, OperatingHours, Reservation
 
 @admin.register(DishCategory)
 class DishCategoryAdmin(admin.ModelAdmin):
@@ -18,7 +17,6 @@ class UserProfileAdmin(admin.ModelAdmin):
     list_display = ('user', 'phone_number', 'city')
     search_fields = ('user__username', 'phone_number')
 
-# ეს კლასი საშუალებას გვაძლევს, შეკვეთის დეტალები პირდაპირ Order-ის გვერდზე ვნახოთ და დავამატოთ
 class OrderItemInline(admin.TabularInline):
     model = OrderItem
     extra = 0
@@ -31,6 +29,7 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ('user__username', 'id')
     inlines = [OrderItemInline]
 
+
 @admin.register(Review)
 class ReviewAdmin(admin.ModelAdmin):
     list_display = ('dish', 'user', 'rating', 'created_at')
@@ -42,3 +41,25 @@ class CouponAdmin(admin.ModelAdmin):
     list_display = ('code', 'discount_percent', 'is_active', 'valid_to', 'one_use_per_user')
     list_filter = ('is_active', 'one_use_per_user')
     search_fields = ('code',)
+
+
+@admin.register(Table)
+class TableAdmin(admin.ModelAdmin):
+    list_display = ('name', 'capacity', 'is_active')
+    list_filter = ('is_active', 'capacity')
+    search_fields = ('name',)
+
+
+@admin.register(OperatingHours)
+class OperatingHoursAdmin(admin.ModelAdmin):
+    list_display = ('get_weekday_display', 'open_time', 'close_time')
+    ordering = ('weekday',)
+
+
+@admin.register(Reservation)
+class ReservationAdmin(admin.ModelAdmin):
+    list_display = ('user', 'table', 'party_size', 'start_time', 'end_time', 'status')
+    list_filter = ('status', 'table', 'start_time')
+    search_fields = ('user__username', 'table__name')
+
+    date_hierarchy = 'start_time'

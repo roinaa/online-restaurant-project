@@ -1,0 +1,82 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Book a Table - Step Ordering{% endblock %}
+
+{% block styles %}
+<style>
+    .time-slots-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+        gap: 10px;
+    }
+    .time-slot-btn {
+        padding: 0.75rem 0.5rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+    .time-slot-btn.active {
+        background-color: #E60000 !important;
+        color: #fff !important;
+        border-color: #E60000 !important;
+    }
+    .time-slot-btn.selected-range {
+        background-color: #f8d7da;
+        border-color: #E60000;
+        color: #58151c;
+    }
+</style>
+{% endblock %}
+
+
+{% block content %}
+    <div class="breadcrumb-bar">
+        <div class="container">
+            <nav aria-label="breadcrumb">
+                <ol class="breadcrumb mb-0">
+                    <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+                    <li class="breadcrumb-item active" aria-current="page">Book a Table</li>
+                </ol>
+            </nav>
+        </div>
+    </div>
+
+    <div class="container my-5">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <h2 class="text-center fw-bold mb-4">Book Your Table</h2>
+
+                <div id="booking-wizard">
+                    <div class="mb-4">
+                        <label for="party-size" class="form-label fs-5 fw-bold">Select Number of Guests</label>
+                        <input type="number" class="form-control" id="party-size" value="2" min="1" max="12">
+                        <div id="party-size-error" class="text-danger mt-2"></div>
+                    </div>
+
+                    <div class="mb-4" id="date-step">
+                        <label for="datepicker" class="form-label fs-5 fw-bold">Select a Date</label>
+                        <input type="text" class="form-control" id="datepicker" placeholder="Click to select a date">
+                    </div>
+
+                    <div class="mb-4" id="time-step">
+                        <label class="form-label fs-5 fw-bold">Select Start and End Time</label>
+                        <div id="time-slots-container" class="time-slots-grid">
+                        </div>
+                        <small class="form-text text-muted">Click your desired start time, then your end time.</small>
+                    </div>
+
+                    <div class="mt-4" id="booking-actions" style="display: none;">
+                        <div id="booking-summary" class="alert alert-info"></div>
+                        <div id="booking-error" class="text-danger mt-2"></div>
+                        <button class="btn btn-danger w-100 btn-lg" id="btn-book-now" disabled>Book Now</button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block scripts %}
+    <script src="{% static 'js/book_table.js' %}"></script>
+{% endblock %}

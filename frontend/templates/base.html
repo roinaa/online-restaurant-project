@@ -11,6 +11,9 @@
 
     <link rel="stylesheet" href="{% static 'css/style.css' %}">
 
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://npmcdn.com/flatpickr/dist/themes/dark.css">
+
     {% block styles %}{% endblock %}
 </head>
 <body>
@@ -33,6 +36,8 @@
                             <a class="nav-link" href="{% url 'menu' %}">Menu</a> </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'cart' %}">My Cart</a> </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'book-table' %}">Book a Table</a></li>
                     </ul>
 
                     <ul class="navbar-nav d-flex align-items-center">
@@ -47,7 +52,10 @@
                                 Account
                             </a>
                             <ul class="dropdown-menu dropdown-menu-dark" aria-labelledby="accountDropdown">
-                                <li><a class="dropdown-item" href="{% url 'settings' %}">Account Settings</a></li> <li><a class="dropdown-item" href="{% url 'history' %}">Order History</a></li> <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'settings' %}">Account Settings</a></li>
+                                <li><a class="dropdown-item" href="{% url 'history' %}">Order History</a></li>
+                                <li><a class="dropdown-item" href="{% url 'my-reservations' %}">My Reservations</a></li>
+                                <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item" href="#" id="logout-button">Logout</a></li>
                             </ul>
                         </li>
@@ -86,6 +94,8 @@
     </footer>
 
     <script src="{% static 'vendor/bootstrap/js/bootstrap.bundle.min.js' %}"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script src="{% static 'js/app.js' %}"></script>
 

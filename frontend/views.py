@@ -20,3 +20,9 @@ def history_view(request):
 
 def settings_view(request):
     return render(request, 'settings.html')
+
+def book_table_page(request):
+    return render(request, 'book_table.html')
+
+def my_reservations_page(request):
+    return render(request, 'my_reservations.html')

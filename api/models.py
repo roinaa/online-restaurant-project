@@ -138,6 +138,7 @@ class OrderItem(models.Model):
              self.price_at_order = self.dish.price
         super().save(*args, **kwargs)
 
+
 class Review(models.Model):
 
     # მოდელი კერძების შეფასებებისთვის.
@@ -163,12 +164,66 @@ class Review(models.Model):
         return f"Review for {self.dish.name} by {self.user.username} ({self.rating} stars)"
 
 
+class Table(models.Model):
 
-from django.db.models.signals import post_save
-from django.dispatch import receiver
+    name = models.CharField(max_length=100)
+    capacity = models.PositiveIntegerField(
+        help_text="რამდენი ადამიანი ეტევა მაქსიმუმ"
+    )
+    is_active = models.BooleanField(default=True)
 
-@receiver(post_save, sender=User)
-def create_or_update_user_profile(sender, instance, created, **kwargs):
+    def __str__(self):
+        return f"{self.name} (Capacity: {self.capacity})"
 
-    if created:
-        UserProfile.objects.create(user=instance)
+    class Meta:
+        ordering = ['capacity']
+
+
+class OperatingHours(models.Model):
+
+    WEEKDAY_CHOICES = [
+        (0, 'Monday'),
+        (1, 'Tuesday'),
+        (2, 'Wednesday'),
+        (3, 'Thursday'),
+        (4, 'Friday'),
+        (5, 'Saturday'),
+        (6, 'Sunday'),
+    ]
+
+    weekday = models.IntegerField(choices=WEEKDAY_CHOICES, unique=True)
+    open_time = models.TimeField()
+    close_time = models.TimeField()
+
+    def __str__(self):
+        return f"{self.get_weekday_display()}: {self.open_time.strftime('%H:%M')} - {self.close_time.strftime('%H:%M')}"
+
+    class Meta:
+        ordering = ['weekday']
+
+
+class Reservation(models.Model):
+    STATUS_CHOICES = [
+        ('Pending', 'Pending'),
+        ('Confirmed', 'Confirmed'),
+        ('Cancelled', 'Cancelled'),
+    ]
+
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='reservations')
+    table = models.ForeignKey(Table, on_delete=models.CASCADE, related_name='reservations')
+    party_size = models.PositiveIntegerField(
+        help_text="სტუმრების რაოდენობა"
+    )
+
+    start_time = models.DateTimeField()
+    end_time = models.DateTimeField()
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Confirmed')
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Reservation for {self.user.username} at {self.table.name} ({self.start_time.strftime('%Y-%m-%d %H:%M')})"
+
+    class Meta:
+        ordering = ['start_time']

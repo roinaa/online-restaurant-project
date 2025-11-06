@@ -13,7 +13,11 @@ from .views import (
     ChangePasswordView,
     ReviewCreateView,
     ApplyCouponView,
-    RemoveCouponView
+    RemoveCouponView,
+    GetAvailabilityView,
+    CreateReservationView,
+    ReservationHistoryView,
+    CancelReservationView
 )
 
 urlpatterns = [
@@ -25,6 +29,10 @@ urlpatterns = [
     path('cart/', CartView.as_view(), name='cart-api'),
     path('cart/apply-coupon/', ApplyCouponView.as_view(), name='apply-coupon'),
     path('cart/remove-coupon/', RemoveCouponView.as_view(), name='remove-coupon'),
+    path('reservations/availability/', GetAvailabilityView.as_view(), name='reservation-availability'),
+    path('reservations/create/', CreateReservationView.as_view(), name='reservation-create'),
+    path('reservations/history/', ReservationHistoryView.as_view(), name='reservation-history'),
+    path('reservations/cancel/<int:pk>/', CancelReservationView.as_view(), name='reservation-cancel'),
     path('orders/place/', PlaceOrderView.as_view(), name='place-order'),
     path('orders/history/', OrderHistoryView.as_view(), name='order-history'),
     path('featured-dishes/', FeaturedDishListView.as_view(), name='featured-dishes'),
