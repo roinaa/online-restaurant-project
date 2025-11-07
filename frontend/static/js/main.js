@@ -75,36 +75,45 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // კერძების წამოღება და გამოჩენა
-async function fetchDishes(url = null) {
+    async function fetchDishes(url = null) {
 
-    if (!url) {
-        const params = new URLSearchParams();
-        if (currentFilters.category !== 'all') params.append('category', currentFilters.category);
-        if (currentFilters.spiciness !== null) params.append('spiciness', currentFilters.spiciness);
-        if (currentFilters.has_nuts === false) params.append('has_nuts', 'false');
-        if (currentFilters.is_vegetarian === true) params.append('is_vegetarian', 'true');
+        let finalUrl = url;
+        let baseUrlForPagination;
 
-        url = `${API_DISHES_URL}?${params.toString()}`;
+        if (!url) {
+            const params = new URLSearchParams();
+            if (currentFilters.category !== 'all') params.append('category', currentFilters.category);
+            if (currentFilters.spiciness !== null) params.append('spiciness', currentFilters.spiciness);
+            if (currentFilters.has_nuts === false) params.append('has_nuts', 'false');
+            if (currentFilters.is_vegetarian === true) params.append('is_vegetarian', 'true');
+
+            finalUrl = `${API_DISHES_URL}?${params.toString()}`;
+            baseUrlForPagination = finalUrl;
+        } else {
+            let parsedUrl = new URL(url, window.location.origin);
+            parsedUrl.searchParams.delete('page');
+            baseUrlForPagination = parsedUrl.pathname + parsedUrl.search;
+        }
+
+        console.log('Fetching dishes from:', finalUrl);
+
+        try {
+            dishesContainer.innerHTML = '<p>Loading dishes...</p>';
+            const response = await fetch(finalUrl);
+            if (!response.ok) throw new Error('Network response was not ok');
+
+            const data = await response.json();
+
+            allDishes = data.results;
+            renderDishes(data.results);
+
+            renderPagination(data, baseUrlForPagination);
+
+        } catch (error) {
+            console.error('Error fetching dishes:', error);
+            dishesContainer.innerHTML = '<p class="text-danger">Failed to load dishes. Please try again.</p>';
+        }
     }
-
-    console.log('Fetching dishes from:', url);
-
-    try {
-        dishesContainer.innerHTML = '<p>Loading dishes...</p>';
-        const response = await fetch(url);
-        if (!response.ok) throw new Error('Network response was not ok');
-
-        const data = await response.json();
-
-        allDishes = data.results;
-        renderDishes(data.results);
-        renderPagination(data);
-
-    } catch (error) {
-        console.error('Error fetching dishes:', error);
-        dishesContainer.innerHTML = '<p class="text-danger">Failed to load dishes. Please try again.</p>';
-    }
-}
 
     function renderDishes(dishes) {
         dishesContainer.innerHTML = '';
@@ -259,47 +268,64 @@ async function fetchDishes(url = null) {
     fetchDishes();
     updateCartCounter();
 
-    function renderPagination(data) {
+    function renderPagination(data, baseUrl) {
         const paginationContainer = document.getElementById('pagination-container');
         if (!paginationContainer) return;
 
         paginationContainer.innerHTML = '';
+        const pageSize = 9;
+        const totalPages = Math.ceil(data.count / pageSize);
 
-        let prevButtonHtml = '';
+        if (totalPages <= 1) return;
+
+        let currentPage = 1;
         if (data.previous) {
-            prevButtonHtml = `
-                <button class="btn btn-danger" data-url="${data.previous}">
-                    &laquo; Previous
-                </button>
-            `;
-        } else {
-            prevButtonHtml = `
-                <button class="btn btn-outline-danger" disabled>
-                    &laquo; Previous
-                </button>
-            `;
+            try {
+                let prevUrl = new URL(data.previous);
+                currentPage = parseInt(prevUrl.searchParams.get('page') || '1', 10) + 1;
+            } catch (e) {
+                currentPage = 2;
+            }
+        } else if (data.next) {
+            try {
+                let nextUrl = new URL(data.next);
+                currentPage = parseInt(nextUrl.searchParams.get('page'), 10) - 1;
+            } catch (e) {
+                currentPage = 1;
+            }
+        } else if (data.count > 0) {
+            currentPage = 1;
         }
 
-        let nextButtonHtml = '';
-        if (data.next) {
-            nextButtonHtml = `
-                <button class="btn btn-danger" data-url="${data.next}">
-                    Next &raquo;
-                </button>
-            `;
-        } else {
-            nextButtonHtml = `
-                <button class="btn btn-outline-danger" disabled>
-                    Next &raquo;
-                </button>
-            `;
+        let paginationHtml = '<nav><ul class="pagination">';
+
+        paginationHtml += data.previous
+            ? `<li class="page-item"><a class="page-link" href="#" data-url="${data.previous}">&laquo; Previous</a></li>`
+            : `<li class="page-item disabled"><a class="page-link" href="#">&laquo; Previous</a></li>`;
+
+        const linkSeparator = baseUrl.includes('?') ? '&' : '?';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const pageUrl = `${baseUrl}${linkSeparator}page=${i}`;
+            if (i === currentPage) {
+                paginationHtml += `<li class="page-item active"><a class="page-link" href="#">${i}</a></li>`;
+            } else {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-url="${pageUrl}">${i}</a></li>`;
+            }
         }
 
-        paginationContainer.innerHTML = prevButtonHtml + nextButtonHtml;
+        paginationHtml += data.next
+            ? `<li class="page-item"><a class="page-link" href="#" data-url="${data.next}">Next &raquo;</a></li>`
+            : `<li class="page-item disabled"><a class="page-link" href="#">Next &raquo;</a></li>`;
 
-        paginationContainer.querySelectorAll('button[data-url]').forEach(button => {
+        paginationHtml += '</ul></nav>';
+
+        paginationContainer.innerHTML = paginationHtml;
+
+        paginationContainer.querySelectorAll('a[data-url]').forEach(button => {
             button.addEventListener('click', (e) => {
-                fetchDishes(e.target.dataset.url);
+                e.preventDefault();
+                fetchDishes(e.target.closest('[data-url]').dataset.url);
                 window.scrollTo(0, 0);
             });
         });
