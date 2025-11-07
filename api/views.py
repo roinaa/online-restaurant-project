@@ -1,4 +1,6 @@
+from django.conf import settings
 from django.contrib.auth.models import User
+from django.core.mail import send_mail
 from rest_framework import generics, filters, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
@@ -69,6 +71,22 @@ class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
+
+    def perform_create(self, serializer):
+        user = serializer.save()
+        try:
+            subject = 'Welcome to Step Ordering!'
+            message = f'Hi {user.username},\n\nThank you for registering at Step Ordering. We are excited to see you!'
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending welcome email: {e}")
 
 # ლოგინის View
 class LoginView(APIView):
@@ -206,6 +224,30 @@ class PlaceOrderView(APIView):
         # ვაქცევთ შეკვეთად
         cart.status = 'completed'
         cart.save()
+
+        try:
+            # ვქმნით შეკვეთის დეტალურ ტექსტს
+            order_details = ""
+            for item in cart.items.all():
+                order_details += f"- {item.dish.name} (x{item.quantity}) - ${item.get_total_price()}\n"
+
+            if cart.coupon:
+                order_details += f"\nCoupon Applied: {cart.coupon.code} (-{cart.coupon.discount_percent}%)\n"
+
+            subject = f'Your Step Ordering Order #{cart.id} is Confirmed!'
+            message = f'Hi {request.user.username},\n\nYour order has been successfully placed.\n\n' \
+                      f'Order Summary:\n{order_details}\n' \
+                      f'Total Price: ${cart.total_price}\n\nThank you for your purchase!'
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [request.user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending order confirmation email: {e}")
 
         # ვაბრუნებთ დასრულებულ შეკვეთას
         serializer = OrderSerializer(cart)
@@ -526,6 +568,25 @@ class CreateReservationView(APIView):
             end_time=end_datetime,
             status='Confirmed'
         )
+
+        try:
+            subject = f'Your Table Reservation is Confirmed! (ID: #{reservation.id})'
+            message = f'Hi {request.user.username},\n\nYour reservation is confirmed:\n\n' \
+                      f'Table: {reservation.table.name}\n' \
+                      f'Guests: {reservation.party_size}\n' \
+                      f'Date: {reservation.start_time.strftime("%Y-%m-%d")}\n' \
+                      f'Time: {reservation.start_time.strftime("%H:%M")} - {reservation.end_time.strftime("%H:%M")}\n\n' \
+                      f'We look forward to seeing you!'
+
+            send_mail(
+                subject,
+                message,
+                settings.DEFAULT_FROM_EMAIL,
+                [request.user.email],
+                fail_silently=False,
+            )
+        except Exception as e:
+            print(f"Error sending reservation confirmation email: {e}")
 
         return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
 

@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-
     function renderTimeSlots() {
         slotsContainer.innerHTML = '';
         let availableSlotsFound = false;
@@ -157,8 +156,15 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.remove('btn-outline-secondary');
             e.target.classList.add('active');
             updateSlotAvailability(clickedTime);
+
         } else if (!selectedEndTime) {
-            if (clickedTime <= selectedStartTime) {
+
+            if (clickedTime === selectedStartTime) {
+                resetSlotSelection();
+                return;
+            }
+
+            if (clickedTime < selectedStartTime) {
                 resetSlotSelection();
                 if (slot.available) {
                     selectedStartTime = clickedTime;
@@ -181,15 +187,19 @@ document.addEventListener('DOMContentLoaded', () => {
             e.target.classList.remove('btn-outline-secondary');
             e.target.classList.add('active');
             highlightSlotRange();
+
         } else {
+            const clickedIsStart = (clickedTime === selectedStartTime);
+            const clickedIsEnd = (clickedTime === selectedEndTime);
+
             resetSlotSelection();
-            if (!slot.available) {
-                return;
+
+            if (!clickedIsStart && !clickedIsEnd && slot.available) {
+                selectedStartTime = clickedTime;
+                e.target.classList.remove('btn-outline-secondary');
+                e.target.classList.add('active');
+                updateSlotAvailability(clickedTime);
             }
-            selectedStartTime = clickedTime;
-            e.target.classList.remove('btn-outline-secondary');
-            e.target.classList.add('active');
-            updateSlotAvailability(clickedTime);
         }
     }
 
@@ -204,28 +214,29 @@ document.addEventListener('DOMContentLoaded', () => {
             btn.classList.remove('active', 'selected-range');
 
             const slot = availableSlots.find(s => s.time === btn.dataset.time);
-            if (slot) {
-                const index = availableSlots.indexOf(slot);
-                let isVisuallyAvailable = slot.available;
-                if (!slot.available && index > 0 && availableSlots[index - 1].available) {
-                    isVisuallyAvailable = true;
-                }
+            if (!slot) return;
 
-                if (isVisuallyAvailable) {
-                    btn.classList.add('btn-outline-danger');
-                    btn.classList.remove('btn-outline-secondary');
-                } else {
-                    btn.classList.add('btn-outline-secondary');
-                    btn.classList.remove('btn-outline-danger');
-                }
+            const index = availableSlots.indexOf(slot);
+            let isVisuallyAvailable = slot.available;
+            if (!slot.available && index > 0 && availableSlots[index - 1].available) {
+                isVisuallyAvailable = true;
             }
-            btn.disabled = false;
+
+            if (isVisuallyAvailable) {
+                btn.classList.add('btn-outline-danger');
+                btn.classList.remove('btn-outline-secondary');
+                btn.disabled = false;
+            } else {
+                btn.classList.add('btn-outline-secondary');
+                btn.classList.remove('btn-outline-danger');
+                btn.disabled = true;
+            }
         });
     }
 
     function updateSlotAvailability(startTime) {
-        let [startH, startM] = startTime.split(':').map(Number);
 
+        let [startH, startM] = startTime.split(':').map(Number);
         let startDate = new Date();
         startDate.setHours(startH, startM, 0, 0);
 
@@ -235,16 +246,36 @@ document.addEventListener('DOMContentLoaded', () => {
         let closingDate = new Date();
         closingDate.setHours(closeH, closeM, 0, 0);
 
+        if (closingDate <= startDate) {
+            closingDate.setDate(closingDate.getDate() + 1);
+        }
+
         slotsContainer.querySelectorAll('.time-slot-btn').forEach(btn => {
             const btnTime = btn.dataset.time;
             if (!btnTime) return;
+
+            const slot = availableSlots.find(s => s.time === btnTime);
+            let isVisuallyAvailable = slot.available;
+            const index = availableSlots.indexOf(slot);
+            if (!slot.available && index > 0 && availableSlots[index - 1].available) {
+                isVisuallyAvailable = true;
+            }
+
+            if (isVisuallyAvailable) {
+                btn.disabled = false;
+            } else {
+                btn.disabled = true;
+                return;
+            }
+
+            if (btnTime === startTime) return;
 
             let [btnH, btnM] = btnTime.split(':').map(Number);
             let btnDate = new Date();
             btnDate.setHours(btnH, btnM, 0, 0);
 
             if (btnDate < startDate) {
-                if (maxEndDate.getDate() > startDate.getDate()) {
+                if (maxEndDate.getDate() > startDate.getDate() || closingDate.getDate() > startDate.getDate()) {
                     btnDate.setDate(btnDate.getDate() + 1);
                 }
             }
@@ -266,7 +297,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
             }
 
-            if (!isSelectable && btnTime !== startTime) {
+            if (!isSelectable) {
                 btn.disabled = true;
             }
         });

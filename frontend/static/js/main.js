@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const API_DISHES_URL = '/api/dishes/';
 
     // DOM ელემენტები
-    const categoriesContainer = document.getElementById('category-links');
+    const categoriesContainer = document.getElementById('category-filter-list');
     const dishesContainer = document.getElementById('dishes-container');
     const filterForm = document.getElementById('filter-form');
     const spicinessSlider = document.getElementById('filter-spiciness');
@@ -42,34 +42,40 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function renderCategories(categories) {
+        if (!categoriesContainer) return;
         categoriesContainer.innerHTML = '';
-        const allLink = createCategoryLink('All', 'all', true);
-        categoriesContainer.appendChild(allLink);
+
+        const allOption = document.createElement('div');
+        allOption.className = 'form-check';
+        allOption.innerHTML = `
+            <input class="form-check-input" type="radio" name="category-filter" id="cat-all" value="all" checked>
+            <label class="form-check-label" for="cat-all">
+                All
+            </label>
+        `;
+        categoriesContainer.appendChild(allOption);
+
         categories.forEach(category => {
-            const categoryLink = createCategoryLink(category.name, category.slug);
-            categoriesContainer.appendChild(categoryLink);
+            const option = document.createElement('div');
+            option.className = 'form-check';
+            option.innerHTML = `
+                <input class="form-check-input" type="radio" name="category-filter" id="cat-${category.slug}" value="${category.slug}">
+                <label class="form-check-label" for="cat-${category.slug}">
+                    ${category.name}
+                </label>
+            `;
+            categoriesContainer.appendChild(option);
         });
+
         addCategoryClickHandlers();
     }
 
-    function createCategoryLink(name, slug, isActive = false) {
-        const link = document.createElement('a');
-        link.href = '#';
-        link.className = 'nav-link category-link';
-        if (isActive) link.classList.add('active');
-        link.textContent = name;
-        link.dataset.slug = slug;
-        return link;
-    }
-
     function addCategoryClickHandlers() {
-        categoriesContainer.querySelectorAll('.category-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                categoriesContainer.querySelector('.category-link.active')?.classList.remove('active');
-                link.classList.add('active');
-                currentFilters.category = link.dataset.slug;
-                fetchDishes();
+        if (!categoriesContainer) return;
+
+        categoriesContainer.querySelectorAll('input[name="category-filter"]').forEach(radio => {
+            radio.addEventListener('change', (e) => {
+                currentFilters.category = e.target.value;
             });
         });
     }
@@ -167,22 +173,41 @@ document.addEventListener('DOMContentLoaded', () => {
         spicinessLabel.textContent = `Spiciness: ${spicinessMap[value]}`;
     });
 
-    filterForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        const spicinessValue = parseInt(spicinessSlider.value, 10);
-        currentFilters.spiciness = spicinessValue === 0 ? null : spicinessValue - 1;
-        currentFilters.has_nuts = nutsCheckbox.checked ? false : null;
-        currentFilters.is_vegetarian = vegetarianCheckbox.checked ? true : null;
-        fetchDishes();
-    });
+    if (filterForm) {
+        filterForm.addEventListener('submit', (e) => {
+            e.preventDefault();
 
-    resetButton.addEventListener('click', () => {
+            const selectedCategory = document.querySelector('input[name="category-filter"]:checked');
+            currentFilters.category = selectedCategory ? selectedCategory.value : 'all';
+
+            const spicinessValue = parseInt(spicinessSlider.value, 10);
+            currentFilters.spiciness = spicinessValue === 0 ? null : spicinessValue - 1;
+            currentFilters.has_nuts = nutsCheckbox.checked ? false : null;
+            currentFilters.is_vegetarian = vegetarianCheckbox.checked ? true : null;
+
+            fetchDishes();
+        });
+    }
+
+    filterForm.addEventListener('reset', () => {
+
         currentFilters.spiciness = null;
         currentFilters.has_nuts = null;
         currentFilters.is_vegetarian = null;
-        spicinessLabel.textContent = 'Spiciness: Not Chosen';
-        fetchDishes();
+        currentFilters.category = 'all';
+
+        if (spicinessLabel) spicinessLabel.textContent = 'Spiciness: Not Chosen';
+
+        if (categoriesContainer) {
+            const allRadio = document.getElementById('cat-all');
+            if (allRadio) allRadio.checked = true;
+        }
+
+        setTimeout(() => {
+            fetchDishes();
+        }, 0);
     });
+
 
     const csrftoken = getCookie('csrftoken');
 
