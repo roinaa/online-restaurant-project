@@ -168,6 +168,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (reviewedButton) {
                     reviewedButton.textContent = 'Reviewed';
                     reviewedButton.disabled = true;
+                    reviewedButton.classList.remove('btn-review');
+                    reviewedButton.classList.remove('btn-outline-danger');
+                    reviewedButton.classList.add('btn-outline-success');
                 }
             } else {
                 const errorData = await response.json();

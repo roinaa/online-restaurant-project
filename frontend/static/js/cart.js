@@ -7,7 +7,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const checkoutModalElement = document.getElementById('checkoutConfirmModal');
     const bsCheckoutModal = new bootstrap.Modal(checkoutModalElement);
     const confirmOrderBtn = document.getElementById('confirm-order-btn');
-
+    const clearCartBtn = document.getElementById('clear-cart-btn');
+    const clearCartModalElement = document.getElementById('clearCartConfirmModal');
+    const bsClearCartModal = new bootstrap.Modal(clearCartModalElement);
+    const confirmClearCartBtn = document.getElementById('confirm-clear-cart-btn');
     const couponInput = document.getElementById('coupon-input');
     const applyCouponBtn = document.getElementById('apply-coupon-btn');
     const couponMessage = document.getElementById('coupon-message');
@@ -76,24 +79,47 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!cartData.items || cartData.items.length === 0) {
             cartBody.innerHTML = '<p class="text-center p-4 text-muted">Your cart is empty.</p>';
             if (checkoutButton) checkoutButton.disabled = true;
+
+            if (clearCartBtn) {
+                clearCartBtn.disabled = true;
+                clearCartBtn.classList.remove('btn-outline-danger');
+                clearCartBtn.classList.add('text-secondary');
+
+                clearCartBtn.style.fontWeight = 'bold';
+                clearCartBtn.style.textTransform = 'uppercase';
+                clearCartBtn.style.textDecoration = 'none';
+                clearCartBtn.style.border = 'none';
+            }
         } else {
+            cartBody.innerHTML = '';
             cartData.items.forEach(item => {
                 const itemRow = createCartItemRow(item);
                 cartBody.appendChild(itemRow);
             });
             if (checkoutButton) checkoutButton.disabled = false;
+
+            if (clearCartBtn) {
+                clearCartBtn.disabled = false;
+                clearCartBtn.classList.add('btn-outline-danger');
+                clearCartBtn.classList.remove('text-secondary');
+
+                // ვაბრუნებთ სტილებს
+                clearCartBtn.style.fontWeight = '';
+                clearCartBtn.style.textTransform = '';
+                clearCartBtn.style.textDecoration = '';
+                clearCartBtn.style.border = '';
+            }
         }
 
-        // ვაახლებთ ჯამურ ფასს და მრიცხველს
+        // ვანახლებთ ჯამურ ფასს და მრიცხველს
         if (grandTotalElement) {
             grandTotalElement.textContent = `$${parseFloat(cartData.total_price).toFixed(2)}`;
         }
         updateCartCounter(cartData);
 
         if (cartData.coupon) {
-            // თუ კუპონი გამოყენებულია
-            couponForm.style.display = 'none'; // დამალე შეყვანის ველი
-            activeCouponDisplay.style.display = 'block'; // აჩვენე აქტიური კუპონის ბლოკი
+            couponForm.style.display = 'none';
+            activeCouponDisplay.style.display = 'block';
             activeCouponDisplay.innerHTML = `
                 <div class="alert alert-success d-flex justify-content-between align-items-center">
                     <span>
@@ -102,16 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
                     <button class="btn-close" id="remove-active-coupon-btn" title="Remove Coupon"></button>
                 </div>
             `;
-            // წაშლის ღილაკს დავამატოთ ლოგიკა
             document.getElementById('remove-active-coupon-btn').addEventListener('click', removeCoupon);
         } else {
-            // თუ კუპონი არ არის გამოყენებული
-            couponForm.style.display = 'block'; // აჩვენე შეყვანის ველი
-            activeCouponDisplay.style.display = 'none'; // დამალე აქტიური კუპონის ბლოკი
+            couponForm.style.display = 'block';
+            activeCouponDisplay.style.display = 'none';
         }
     }
-
-
 
 
     function createCartItemRow(item) {
@@ -269,6 +291,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
 
     loadCartItems();
+
+
+    if (clearCartBtn) {
+        clearCartBtn.addEventListener('click', () => {
+            bsClearCartModal.show();
+        });
+    }
+
+    if (confirmClearCartBtn) {
+        confirmClearCartBtn.addEventListener('click', async () => {
+            bsClearCartModal.hide();
+
+            try {
+                const response = await fetch('/api/cart/', {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Token ${token}`,
+                        'X-CSRFToken': csrftoken
+                    },
+                    body: JSON.stringify({}) // ცარიელი ობიექტი
+                });
+
+                if (response.ok) {
+                    const cartData = await response.json();
+                    renderCart(cartData); // ვარენდერებ განულებულ კალათას
+                    showGlobalAlert('Cart cleared successfully.', 'success');
+                } else {
+                    throw new Error('Failed to clear cart.');
+                }
+            } catch (error) {
+                console.error('Error clearing cart:', error);
+                showGlobalAlert(error.message, 'danger');
+            }
+        });
+    }
 
 
     // კუპონის წაშლის ფუნქცია

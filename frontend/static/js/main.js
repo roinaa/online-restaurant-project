@@ -75,28 +75,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // კერძების წამოღება და გამოჩენა
-    async function fetchDishes() {
+async function fetchDishes(url = null) {
+
+    if (!url) {
         const params = new URLSearchParams();
         if (currentFilters.category !== 'all') params.append('category', currentFilters.category);
         if (currentFilters.spiciness !== null) params.append('spiciness', currentFilters.spiciness);
         if (currentFilters.has_nuts === false) params.append('has_nuts', 'false');
         if (currentFilters.is_vegetarian === true) params.append('is_vegetarian', 'true');
 
-        const url = `${API_DISHES_URL}?${params.toString()}`;
-        console.log('Fetching dishes from:', url);
-
-        try {
-            dishesContainer.innerHTML = '<p>Loading dishes...</p>';
-            const response = await fetch(url);
-            if (!response.ok) throw new Error('Network response was not ok');
-            const dishes = await response.json();
-            allDishes = dishes;
-            renderDishes(dishes);
-        } catch (error) {
-            console.error('Error fetching dishes:', error);
-            dishesContainer.innerHTML = '<p class="text-danger">Failed to load dishes. Please try again.</p>';
-        }
+        url = `${API_DISHES_URL}?${params.toString()}`;
     }
+
+    console.log('Fetching dishes from:', url);
+
+    try {
+        dishesContainer.innerHTML = '<p>Loading dishes...</p>';
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+
+        allDishes = data.results;
+        renderDishes(data.results);
+        renderPagination(data);
+
+    } catch (error) {
+        console.error('Error fetching dishes:', error);
+        dishesContainer.innerHTML = '<p class="text-danger">Failed to load dishes. Please try again.</p>';
+    }
+}
 
     function renderDishes(dishes) {
         dishesContainer.innerHTML = '';
@@ -246,7 +254,55 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+
     fetchCategories();
     fetchDishes();
     updateCartCounter();
+
+    function renderPagination(data) {
+        const paginationContainer = document.getElementById('pagination-container');
+        if (!paginationContainer) return;
+
+        paginationContainer.innerHTML = '';
+
+        let prevButtonHtml = '';
+        if (data.previous) {
+            prevButtonHtml = `
+                <button class="btn btn-danger" data-url="${data.previous}">
+                    &laquo; Previous
+                </button>
+            `;
+        } else {
+            prevButtonHtml = `
+                <button class="btn btn-outline-danger" disabled>
+                    &laquo; Previous
+                </button>
+            `;
+        }
+
+        let nextButtonHtml = '';
+        if (data.next) {
+            nextButtonHtml = `
+                <button class="btn btn-danger" data-url="${data.next}">
+                    Next &raquo;
+                </button>
+            `;
+        } else {
+            nextButtonHtml = `
+                <button class="btn btn-outline-danger" disabled>
+                    Next &raquo;
+                </button>
+            `;
+        }
+
+        paginationContainer.innerHTML = prevButtonHtml + nextButtonHtml;
+
+        paginationContainer.querySelectorAll('button[data-url]').forEach(button => {
+            button.addEventListener('click', (e) => {
+                fetchDishes(e.target.dataset.url);
+                window.scrollTo(0, 0);
+            });
+        });
+    }
+
 });

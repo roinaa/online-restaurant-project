@@ -3,6 +3,7 @@ from rest_framework import generics, filters, status
 from rest_framework.authentication import TokenAuthentication
 from rest_framework.authtoken.models import Token
 from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import pagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Coupon, Table, OperatingHours, Reservation
@@ -26,11 +27,18 @@ class DishCategoryListAPIView(generics.ListAPIView):
     queryset = DishCategory.objects.all()
     serializer_class = DishCategorySerializer
 
+class DishPagination(pagination.PageNumberPagination):
+    page_size = 9
+    page_size_query_param = 'page_size'
+    max_page_size = 100
+
 class DishListAPIView(generics.ListAPIView):
     queryset = Dish.objects.all()
     serializer_class = DishSerializer
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['name', 'price']
+
+    pagination_class = DishPagination
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -153,22 +161,29 @@ class CartView(APIView):
         except OrderItem.DoesNotExist:
             return Response({"error": "Item not found in your cart"}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, *args, **kwargs):
+    def delete(self, request):
         item_id = request.data.get('item_id')
 
-        if not item_id:
-            return Response({"error": "Item ID is required"}, status=status.HTTP_400_BAD_REQUEST)
-
         try:
-            order_item = OrderItem.objects.get(id=item_id, order__user=request.user, order__status='pending')
-            cart = order_item.order
-            order_item.delete()
+            # ვპოულობთ მომხმარებლის კალათას
+            cart = Order.objects.get(user=request.user, status='pending')
+        except Order.DoesNotExist:
+            return Response({"error": "Cart not found."}, status=status.HTTP_404_NOT_FOUND)
 
-            cart.calculate_total()  # ვაახლებთ ჯამურ ფასს
-            serializer = OrderSerializer(cart)
-            return Response(serializer.data, status=status.HTTP_200_OK)
-        except OrderItem.DoesNotExist:
-            return Response({"error": "Item not found in your cart"}, status=status.HTTP_404_NOT_FOUND)
+        if item_id:
+            # ვშლით ერთ კონკრეტულ ნივთს
+            try:
+                order_item = OrderItem.objects.get(id=item_id, order=cart)
+                order_item.delete()
+            except OrderItem.DoesNotExist:
+                return Response({"error": "Item not found in your cart"}, status=status.HTTP_404_NOT_FOUND)
+        else:
+            # ვასუფთავებთ მთლიან კალათას
+            cart.items.all().delete()
+
+        cart.calculate_total()
+        serializer = OrderSerializer(cart)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 
 class PlaceOrderView(APIView):
