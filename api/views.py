@@ -8,6 +8,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import pagination
 from rest_framework.response import Response
 from rest_framework.views import APIView
+
+# ჩემი მოდელები და სერიალიზატორები
 from .models import DishCategory, Dish, Order, OrderItem, UserProfile, Coupon, Table, OperatingHours, Reservation
 from .serializers import (
     DishCategorySerializer,
@@ -24,56 +26,72 @@ from .serializers import (
 import datetime
 from django.utils import timezone
 
+# მენიუს გვერდის ლოგიკა
 
+# ეს კლასი აბრუნებს კატეგორიების სიას
 class DishCategoryListAPIView(generics.ListAPIView):
     queryset = DishCategory.objects.all()
     serializer_class = DishCategorySerializer
 
+# ეს არის ჩემი პაგინაციის კლასი.
 class DishPagination(pagination.PageNumberPagination):
     page_size = 9
     page_size_query_param = 'page_size'
     max_page_size = 100
 
+# ეს კლასი აბრუნებს კერძების გაფილტრულ და დალაგებულ სიას.
 class DishListAPIView(generics.ListAPIView):
     queryset = Dish.objects.all()
     serializer_class = DishSerializer
+
+    # ფილტრაცია და დალაგება
+    # ვიყენებ Django-ს ჩაშენებულ ფილტრებს
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['name', 'price']
-
     pagination_class = DishPagination
 
     def get_queryset(self):
+        # ვიღებ ყველა კერძს
         queryset = super().get_queryset()
 
+        # ვამოწმებ URL-ს, ხომ არ მომაწოდეს კატეგორია
         category_slug = self.request.query_params.get('category')
         if category_slug:
+            # ვაფილტრავ ბაზას ამ კატეგორიით
             queryset = queryset.filter(category__slug=category_slug)
 
+        # იგივე ლოგიკა სიცხარისთვის
         spiciness = self.request.query_params.get('spiciness')
         if spiciness is not None and spiciness.isdigit():
             queryset = queryset.filter(spiciness=spiciness)
 
+        # იგივე ლოგიკა თხილისთვის
         has_nuts = self.request.query_params.get('has_nuts')
         if has_nuts is not None:
             has_nuts_bool = has_nuts.lower() in ('true', '1')
             queryset = queryset.filter(has_nuts=has_nuts_bool)
 
+        # იგივე ლოგიკა ვეგეტარიანულისთვის
         is_vegetarian = self.request.query_params.get('is_vegetarian')
         if is_vegetarian is not None:
             is_vegetarian_bool = is_vegetarian.lower() in ('true', '1')
             queryset = queryset.filter(is_vegetarian=is_vegetarian_bool)
 
-        return queryset
+        return queryset # ვაბრუნებ საბოლოო, გაფილტრულ სიას
 
+
+# ავთენტიფიკაციის ლოგიკა
 
 # რეგისტრაციის View
 class RegisterView(generics.CreateAPIView):
+    # generics.CreateAPIView არის ავტომატური კლასი ახალი ობიექტის შესაქმნელად.
     queryset = User.objects.all()
     permission_classes = (AllowAny,)
     serializer_class = UserSerializer
 
     def perform_create(self, serializer):
-        user = serializer.save()
+        user = serializer.save() # ჯერ ვინახავ მომხმარებელს
+        # შემდეგ ვცდილობ იმეილის გაგზავნას
         try:
             subject = 'Welcome to Step Ordering!'
             message = f'Hi {user.username},\n\nThank you for registering at Step Ordering. We are excited to see you!'
@@ -81,23 +99,26 @@ class RegisterView(generics.CreateAPIView):
             send_mail(
                 subject,
                 message,
-                settings.DEFAULT_FROM_EMAIL,
-                [user.email],
+                settings.DEFAULT_FROM_EMAIL, # გამგზავნი (settings.py-დან)
+                [user.email], # მიმღები
                 fail_silently=False,
             )
         except Exception as e:
+            # თუ იმეილი ვერ გაიგზავნა, რეგისტრაცია მაინც წარმატებულია
             print(f"Error sending welcome email: {e}")
 
 # ლოგინის View
 class LoginView(APIView):
     permission_classes = (AllowAny,)
 
-    def post(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs): # ეს ფუნქცია მუშაობს POST მოთხოვნაზე
+        # ვაგზავნი მონაცემებს (email, password) LoginSerializer-ში ვალიდაციისთვის
         serializer = LoginSerializer(data=request.data)
+        # თუ მონაცემები არასწორია (მაგ. email-ი), დააბრუნებს 400 Error-ს
         serializer.is_valid(raise_exception=True)
-
+        # თუ ვალიდაცია წარმატებულია, ვიღებ user ობიექტს სერიალიზატორიდან
         user = serializer.validated_data['user']
-        # ვიღებთ ან ვქმნით Token-ს ამ მომხმარებლისთვის
+        # ვპოულობ ან ვქმნი Token-ს ამ მომხმარებლისთვის
         token, created = Token.objects.get_or_create(user=user)
 
         # ვაბრუნებთ Token-ს და მომხმარებლის სახელს Frontend-ზე
@@ -114,23 +135,27 @@ class LogoutView(APIView):
 
     def post(self, request, *args, **kwargs):
         try:
+            # ვპოულობ მომხმარებლის ტოკენს და ვშლი ბაზიდან
             request.user.auth_token.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
-# კალათის მართვის View
+# კალათის ლოგიკა
 class CartView(APIView):
     authentication_classes = [TokenAuthentication]
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated] # მხოლოდ დალოგინებულებისთვის
 
+    # GET: კალათის ჩვენება
     def get(self, request, *args, **kwargs):
+        # ვპოულობ ამ მომხმარებლის pending სტატუსის მქონე შეკვეთას, ან ვქმნი ახალს
         cart, created = Order.objects.get_or_create(user=request.user, status='pending')
         cart.calculate_total()
-        serializer = OrderSerializer(cart)
+        serializer = OrderSerializer(cart) # ვთარგმნით JSON-ად
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # POST: კალათაში დამატება
     def post(self, request, *args, **kwargs):
         dish_id = request.data.get('dish_id')
         quantity = int(request.data.get('quantity', 1))
@@ -142,25 +167,26 @@ class CartView(APIView):
             dish = Dish.objects.get(id=dish_id)
         except Dish.DoesNotExist:
             return Response({"error": "Dish not found"}, status=status.HTTP_404_NOT_FOUND)
-
+        # ვპოულობ ჩემს კალათას
         cart, created = Order.objects.get_or_create(user=request.user, status='pending')
-
+        # ვპოულობ ამ კერძს ამ კალათაში, ან ვქმნი ახალს
         order_item, item_created = OrderItem.objects.get_or_create(
             order=cart,
             dish=dish
         )
-
+        # თუ კერძი უკვე კალათაშია, ვუმატებ რაოდენობას
         if item_created:
             order_item.quantity = quantity
         else:
             order_item.quantity += quantity
-
         order_item.save()
 
+        # ვიძახებ calculate_total() მეთოდს models.py-დან
         cart.calculate_total()
         serializer = OrderSerializer(cart)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
+    # PUT: რაოდენობის შეცვლა
     def put(self, request, *args, **kwargs):
         item_id = request.data.get('item_id')
         new_quantity = int(request.data.get('quantity', 0))
@@ -169,6 +195,7 @@ class CartView(APIView):
             return Response({"error": "Valid Item ID and quantity are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         try:
+            # ვპოულობ OrderItem-ს ID-ით და ვრწმუნდები, რომ ის ჩემს კალათაშია
             order_item = OrderItem.objects.get(id=item_id, order__user=request.user, order__status='pending')
             order_item.quantity = new_quantity
             order_item.save()
@@ -179,6 +206,7 @@ class CartView(APIView):
         except OrderItem.DoesNotExist:
             return Response({"error": "Item not found in your cart"}, status=status.HTTP_404_NOT_FOUND)
 
+    # DELETE: კალათიდან წაშლა
     def delete(self, request):
         item_id = request.data.get('item_id')
 
@@ -196,14 +224,14 @@ class CartView(APIView):
             except OrderItem.DoesNotExist:
                 return Response({"error": "Item not found in your cart"}, status=status.HTTP_404_NOT_FOUND)
         else:
-            # ვასუფთავებთ მთლიან კალათას
+            # თუ item_id არ მომაწოდეს, ვასუფთავებ მთლიან კალათას
             cart.items.all().delete()
 
         cart.calculate_total()
         serializer = OrderSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# შეკვეთის დადასტურება
 class PlaceOrderView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -225,6 +253,7 @@ class PlaceOrderView(APIView):
         cart.status = 'completed'
         cart.save()
 
+        # იმეილის გაგზავნა
         try:
             # ვქმნით შეკვეთის დეტალურ ტექსტს
             order_details = ""
@@ -253,13 +282,13 @@ class PlaceOrderView(APIView):
         serializer = OrderSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# შეკვეთების ისტორია
 class OrderHistoryView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        # ვპოულობთ ამ მომხმარებლის ყველა დასრულებულ შეკვეთას
+        # ვპოულობ ამ მომხმარებლის ყველა დასრულებულ შეკვეთას
         completed_orders = Order.objects.filter(
             user=request.user,
             status='completed'
@@ -268,35 +297,36 @@ class OrderHistoryView(APIView):
         serializer = OrderSerializer(completed_orders, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
-
-
+# მომხმარებლის პროფილის მართვა
 class UserProfileView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
+    # GET: პროფილის მონაცემების ჩვენება
     def get(self, request, *args, **kwargs):
         profile, created = UserProfile.objects.get_or_create(user=request.user)
         serializer = UserProfileSerializer(profile)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
+    # PUT: პროფილის მონაცემების განახლება
     def put(self, request, *args, **kwargs):
         profile, created = UserProfile.objects.get_or_create(user=request.user)
+        # partial=True - ყველა ველის გაგზავნა არაა საჭირო
         serializer = UserProfileSerializer(profile, data=request.data, partial=True)
 
         if serializer.is_valid():
-            serializer.save()
+            serializer.save() # ეს იძახებს update მეთოდს serializers.py-დან
             return Response(serializer.data, status=status.HTTP_200_OK)
         else:
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-
+# რჩეული კერძების View
 class FeaturedDishListView(generics.ListAPIView):
     queryset = Dish.objects.filter(is_featured=True)
     serializer_class = DishSerializer
     permission_classes = (AllowAny,)
 
-
+# პაროლის შეცვლა
 class ChangePasswordView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -311,10 +341,10 @@ class ChangePasswordView(APIView):
         if not user.check_password(old_password):
             return Response({"old_password": ["Incorrect old password."]}, status=status.HTTP_400_BAD_REQUEST)
 
-        # ვამოწმებთ, ახალი პაროლები ემთხვევა თუ არა
+        # ვამოწმებთ, ახალი პაროლები ემთხვევა თუ არა ერთმანეთს
         if new_password != new_password_confirm:
             return Response({"new_password": ["New passwords do not match."]}, status=status.HTTP_400_BAD_REQUEST)
-
+        # ვამოწმებ, ხომ არ ცდილობს იგივე პაროლის დაყენებას
         if user.check_password(new_password):
             return Response(
                 {"new_password": ["Your new password cannot be the same as your old password."]},
@@ -330,8 +360,7 @@ class ChangePasswordView(APIView):
         return Response({"message": "Password updated successfully"}, status=status.HTTP_200_OK)
 
 
-
-
+# შეფასების დამატება
 class ReviewCreateView(APIView):
 
     authentication_classes = [TokenAuthentication]
@@ -346,6 +375,7 @@ class ReviewCreateView(APIView):
             dish_id = data.get('dish')
             dish = Dish.objects.get(id=dish_id)
 
+            # ვეძებ OrderItem-ს, რომელიც ეკუთვნის ამ User-ს, დასრულებულია და ამ კერძს შეიცავს
             is_purchased = OrderItem.objects.filter(
                 order__user=user,
                 order__status='completed',
@@ -370,6 +400,7 @@ class ReviewCreateView(APIView):
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
+# კუპონის გამოყენება
 class ApplyCouponView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -377,18 +408,21 @@ class ApplyCouponView(APIView):
     def post(self, request, *args, **kwargs):
         coupon_code = request.data.get('coupon_code')
         user = request.user
-
+        # ვპოულობ კალათას
         try:
             cart = Order.objects.get(user=user, status='pending')
         except Order.DoesNotExist:
             return Response({"error": "You have no active cart."}, status=status.HTTP_404_NOT_FOUND)
 
+        # ვპოულობ კუპონს
         try:
             coupon = Coupon.objects.get(code__iexact=coupon_code, is_active=True)
         except Coupon.DoesNotExist:
             return Response({"error": "Invalid coupon code."}, status=status.HTTP_404_NOT_FOUND)
 
+        # 3. ვამოწმებ ერთჯერადობის ლოგიკას
         if coupon.one_use_per_user:
+            # ვამოწმებ, ხომ არ აქვს ამ მომხმარებელს დასრულებული შეკვეთა ამ კუპონით
             has_used_before = Order.objects.filter(
                 user=user,
                 coupon=coupon,
@@ -397,12 +431,13 @@ class ApplyCouponView(APIView):
             if has_used_before:
                 return Response({"error": "You have already used this coupon code."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # 4. ვამოწმებ, ხომ არ არის ეს კუპონი უკვე კალათაში
         if cart.coupon == coupon:
             return Response(
            {"error": "This coupon is already applied."},
                  status=status.HTTP_409_CONFLICT
             )
-
+        # თუ ყველაფერი რიგზეა, ვამაგრებ კუპონს კალათას
         cart.coupon = coupon
         cart.calculate_total()
         cart.save()
@@ -410,7 +445,7 @@ class ApplyCouponView(APIView):
         serializer = OrderSerializer(cart)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-
+# კუპონის მოშორება
 class RemoveCouponView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
@@ -426,6 +461,7 @@ class RemoveCouponView(APIView):
         if not cart.coupon:
             return Response({"error": "No coupon is applied to this cart."}, status=status.HTTP_400_BAD_REQUEST)
 
+        # ვასუფთავებ კუპონის ველს და თავიდან ვითვლი ფასს
         cart.coupon = None
         cart.calculate_total()
         cart.save()
@@ -434,10 +470,14 @@ class RemoveCouponView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+# მაგიდის დაჯავშნის ლოგიკა
+
+# ხელმისაწვდომი დროის ჩვენება
 class GetAvailabilityView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
+    # GET: აბრუნებს თავისუფალ/დაკავებულ სლოტებს
     def get(self, request):
         date_str = request.query_params.get('date')
         table_id = request.query_params.get('table_id')
@@ -475,11 +515,11 @@ class GetAvailabilityView(APIView):
             slot_time = current_time.time()
             is_available = True
 
-            # მოწმდება ხომ არ ემთხვევა სლოტი არსებულ ჯავშანს
+            # ვამოწმებ თითოეულ სლოტს, ხომ არ ემთხვევა რომელიმე ჯავშანს
             for start, end in reservations:
                 # მომწდება თუ სლოტი არსებული ჯავშნის შიგნით ექცევა
                 if current_time >= start and current_time < end:
-                    is_available = False
+                    is_available = False # ეს სლოტი დაკავებულია
                     break
 
             if date == timezone.now().date() and current_time < timezone.now():
@@ -490,16 +530,18 @@ class GetAvailabilityView(APIView):
 
         return Response(slots, status=status.HTTP_200_OK)
 
-
+#  ჯავშნის შექმნა
 class CreateReservationView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
+    # POST: ქმნის ახალ ჯავშანს
     def post(self, request):
         serializer = CreateReservationSerializer(data=request.data)
         if not serializer.is_valid():
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+        # ვიღებ გასუფთავებულ მონაცემებს
         data = serializer.validated_data
         party_size = data['party_size']
         date = data['date']
@@ -515,10 +557,11 @@ class CreateReservationView(APIView):
         except Table.DoesNotExist:
             return Response({"error": "No tables found."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # სამუშაო საათები
+        # ვალიდაცია: დროის შემოწმება
         try:
             hours = OperatingHours.objects.get(weekday=date.weekday())
 
+            # ვაქცევ სრულ თარიღად
             start_datetime = timezone.make_aware(datetime.datetime.combine(date, start_time_obj))
             end_datetime = timezone.make_aware(datetime.datetime.combine(date, end_time_obj))
 
@@ -529,15 +572,17 @@ class CreateReservationView(APIView):
                                     "error": "To book a table for more than 10 hours, please contact the restaurant directly at +123 456 789."},
                                 status=status.HTTP_400_BAD_REQUEST)
 
+            # დახურვის საათის შემოწმება
             if start_datetime.time() < hours.open_time or end_datetime.time() > hours.close_time:
+                # ვამოწმებ ხომ არ გადადის მეორე დღეზე
                 if end_datetime.date() > date or end_datetime.time() > hours.close_time:
                     return Response({
                                         "error": f"The restaurant closes at {hours.close_time.strftime('%H:%M')}. Your selected reservation time exceeds operating hours."},
                                     status=status.HTTP_400_BAD_REQUEST)
-
+            # წარსულის დროის შემოწმება
             if start_datetime < timezone.now():
                 return Response({"error": "Cannot book a reservation in the past."}, status=status.HTTP_400_BAD_REQUEST)
-
+            # დაწყების/დასრულების დროის შემოწმება
             if start_datetime >= end_datetime:
                 return Response({"error": "End time must be after start time."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -569,6 +614,7 @@ class CreateReservationView(APIView):
             status='Confirmed'
         )
 
+        # იმეილის გაგზავნა
         try:
             subject = f'Your Table Reservation is Confirmed! (ID: #{reservation.id})'
             message = f'Hi {request.user.username},\n\nYour reservation is confirmed:\n\n' \
@@ -590,46 +636,48 @@ class CreateReservationView(APIView):
 
         return Response(ReservationSerializer(reservation).data, status=status.HTTP_201_CREATED)
 
-
-
+# ჯავშნების ისტორია
 class ReservationHistoryView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        now = timezone.now()
+        now = timezone.now() # ვიღებ ამჟამინდელ დროს
 
+        # აქტიური ჯავშნები: დადასტურებულია და ჯერ არ დასრულებულა
         active_reservations = Reservation.objects.filter(
             user=request.user,
             status='Confirmed',
-            end_time__gte=now
+            end_time__gte=now # დასრულების დრო მომავალშია
         ).order_by('start_time')
 
+        # გასული ჯავშნები: ან უკვე დასრულდა, ან გაუქმებულია
         past_reservations = Reservation.objects.filter(
             user=request.user,
-            end_time__lt=now
+            end_time__lt=now # დასრულების დრო წარსულშია
         ) | Reservation.objects.filter(
             user=request.user,
             status='Cancelled'
         ).order_by('-start_time')
-
+        # ვაბრუნებ ორ ცალკე სიას
         data = {
             "active": ReservationSerializer(active_reservations, many=True).data,
             "past": ReservationSerializer(past_reservations, many=True).data
         }
         return Response(data, status=status.HTTP_200_OK)
 
-
+# ჯავშნის გაუქმება
 class CancelReservationView(APIView):
     authentication_classes = [TokenAuthentication]
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, pk):
+    def post(self, request, pk): # pk არის ჯავშნის ID, რომელიც URL-დან მოდის
         try:
+            # ვპოულობ ჯავშანს და ვრწმუნდები, რომ ის მე მეკუთვნის
             reservation = Reservation.objects.get(id=pk, user=request.user)
         except Reservation.DoesNotExist:
             return Response({"error": "Reservation not found."}, status=status.HTTP_404_NOT_FOUND)
-
+        # არ შემიძლია გავაუქმო ჯავშანი, რომელიც უკვე დაიწყო
         if reservation.start_time <= timezone.now():
             return Response({"error": "Cannot cancel a reservation that has already started or passed."},
                             status=status.HTTP_400_BAD_REQUEST)

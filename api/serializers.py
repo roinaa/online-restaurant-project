@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
 from rest_framework.authtoken.models import Token
 
+# კერძების და კატეგორიების სერიალიზატორები
 class DishCategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = DishCategory
@@ -43,7 +44,7 @@ class UserSerializer(serializers.ModelSerializer):
         Token.objects.create(user=user)
         return user
 
-# ახალი ლოგინის სერიალიზატორი
+# ლოგინის სერიალიზატორი
 class LoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
     password = serializers.CharField()
@@ -64,12 +65,13 @@ class LoginSerializer(serializers.Serializer):
                 return data
         raise serializers.ValidationError("Incorrect Credentials. Please try again.")
 
-
+# შეკვეთების (Orders/Carts) სერიალიზატორები
 class OrderItemSerializer(serializers.ModelSerializer):
+    # იმის ნაცვლად, რომ dish ობიექტი გავგზავნო, პირდაპირ ვიღებ მის სახელს და სურათს.
     dish_name = serializers.CharField(source='dish.name', read_only=True)
     dish_image = serializers.ImageField(source='dish.image', read_only=True)
     dish_price = serializers.DecimalField(source='dish.price', max_digits=10, decimal_places=2, read_only=True)
-
+    # ეს არის ჩემი custom ველი, რომელიც იძახებს get_is_reviewed ფუნქციას
     is_reviewed = serializers.SerializerMethodField()
 
     class Meta:
@@ -77,6 +79,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         fields = ('id', 'dish', 'dish_name', 'dish_image', 'dish_price', 'quantity', 'price_at_order', 'is_reviewed')
         read_only_fields = ('price_at_order',)
 
+    # ეს არის ჩემი custom ლოგიკა "Leave Review" ღილაკისთვის
     def get_is_reviewed(self, obj):
         user = obj.order.user
         dish = obj.dish
@@ -84,13 +87,16 @@ class OrderItemSerializer(serializers.ModelSerializer):
         if not user or not dish:
             return False
 
-        # ვამოწმებთ, არსებობს თუ არა Review მოდელში ასეთი ჩანაწერი
+        # ვამოწმებ, არსებობს თუ არა Review, სადაც user და dish ემთხვევა
         return Review.objects.filter(user=user, dish=dish).exists()
 
 
 class OrderSerializer(serializers.ModelSerializer):
+    # ეს არის ჩაშენებული სერიალიზატორი
+    # ვეუბნები რომ items ველი უნდა შეავსოს OrderItemSerializer-ით
+    # many=True ნიშნავს რომ ეს იქნება სია
     items = OrderItemSerializer(many=True, read_only=True)
-
+    # აქაც ვიყენებ ჩაშენებულ serializer-ს, რომ კუპონის დეტალები გამოჩნდეს
     coupon = CouponSerializer(read_only=True)
 
     class Meta:
@@ -98,8 +104,9 @@ class OrderSerializer(serializers.ModelSerializer):
         fields = ('id', 'user', 'created_at', 'status', 'total_price', 'coupon', 'items')
         read_only_fields = ('user', 'total_price', 'created_at')
 
-
+# პროფილის და შეფასების სერიალიზატორები
 class UserProfileSerializer(serializers.ModelSerializer):
+    # source-ს ვიყენებ, რომ დავაკავშირო UserProfile-ის ველები User მოდელთან
     email = serializers.EmailField(source='user.email', read_only=True)
     username = serializers.CharField(source='user.username')
 
@@ -108,18 +115,18 @@ class UserProfileSerializer(serializers.ModelSerializer):
         fields = ('username', 'email', 'phone_number', 'address_line_1', 'city')
 
     def update(self, instance, validated_data):
-        # განვაახლოთ User მოდელი (username)
+        # ეს ლოგიკა მჭირდება, რადგან ჩემი ფორმა ერთდროულად 2 მოდელს ცვლის: User (username-ისთვის) და UserProfile (დანარჩენისთვის)
         user_data = validated_data.pop('user', {})
         username = user_data.get('username')
-
+        # ვცვლი User მოდელს
         if username:
-            # ვამოწმებთ, ხომ არ არის ეს username-ი უკვე დაკავებული
+            # ვამოწმებთ, ხომ არ არის ეს username-ი  დაკავებული
             if User.objects.filter(username=username).exclude(pk=instance.user.pk).exists():
                 raise serializers.ValidationError({"username": "A user with that username already exists."})
             instance.user.username = username
             instance.user.save()
 
-        # განვაახლოთ UserProfile მოდელი (phone, address, city)
+        # ვცვლი UserProfile მოდელს
         instance.phone_number = validated_data.get('phone_number', instance.phone_number)
         instance.address_line_1 = validated_data.get('address_line_1', instance.address_line_1)
         instance.city = validated_data.get('city', instance.city)
@@ -128,7 +135,7 @@ class UserProfileSerializer(serializers.ModelSerializer):
         return instance
 
 
-# შეფასების დამატება
+# შეფასების დამატებების სერიალიზატორი
 class ReviewSerializer(serializers.ModelSerializer):
     class Meta:
         model = Review
@@ -140,14 +147,16 @@ class ReviewSerializer(serializers.ModelSerializer):
         }
 
     def validate(self, data):
-        data['user'] = self.context['request'].user
+        # მომხმარებელს ვიღებ 'request'-იდან (ტოკენიდან)
 
+        data['user'] = self.context['request'].user
+        # ვამოწმებ unique_together წესს
         if Review.objects.filter(user=data['user'], dish=data['dish']).exists():
             raise serializers.ValidationError("You have already reviewed this dish.")
 
         return data
 
-
+# მაგიდის დაჯავშნის სერიალიზატორები
 class TableSerializer(serializers.ModelSerializer):
 
     class Meta:
@@ -156,7 +165,9 @@ class TableSerializer(serializers.ModelSerializer):
 
 
 class ReservationSerializer(serializers.ModelSerializer):
+    # ეს სერიალიზატორი გამოიყენება ჯავშნების საჩვენებლად (ისტორიისთვის)
     table = TableSerializer(read_only=True)
+    # ეს ველები ლამაზად აფორმატებს დროს
     start_time_display = serializers.DateTimeField(source='start_time', format='%Y-%m-%d %H:%M')
     end_time_display = serializers.DateTimeField(source='end_time', format='%Y-%m-%d %H:%M')
 
@@ -173,6 +184,8 @@ class ReservationSerializer(serializers.ModelSerializer):
 
 
 class CreateReservationSerializer(serializers.ModelSerializer):
+    # ეს სერიალიზატორი გამოიყენება ახალი ჯავშნის შესაქმნელად
+    # ეს ველები არ არის Reservation მოდელში, მაგრამ მე მათ ვიღებ Frontend-იდან, რომ შემდეგ views.py-ში დავამუშავო.
     date = serializers.DateField(write_only=True)
     start_time_str = serializers.TimeField(write_only=True, source='start_time')
     end_time_str = serializers.TimeField(write_only=True)
